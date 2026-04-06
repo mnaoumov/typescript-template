@@ -12,6 +12,7 @@
       "DOM",
       "ES2024"
     ],
+    "libReplacement": true,
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
     "noEmit": true,
@@ -27,6 +28,6 @@
     "./commitlint.config.ts",
     "./eslint.config.mts",
     "./scripts/**/*.ts",
-    "./src/**/*.ts",
+    "./src/**/*.ts"
   ]
 }
