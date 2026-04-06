@@ -1,0 +1,68 @@
+{
+  "name": "typescript-template",
+  "version": "0.0.0",
+  "description": "TypeScript project template.",
+  "keywords": [],
+  "homepage": "https://github.com/mnaoumov/typescript-template#readme",
+  "bugs": {
+    "url": "https://github.com/mnaoumov/typescript-template/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mnaoumov/typescript-template.git"
+  },
+  "license": "MIT",
+  "author": "Michael Naumov",
+  "type": "module",
+  "scripts": {
+    "build:compile": "jiti scripts/build-compile.ts",
+    "commit": "jiti scripts/commit.ts",
+    "format": "jiti scripts/format.ts",
+    "format:check": "jiti scripts/format-check.ts",
+    "lint": "jiti scripts/lint.ts",
+    "lint:fix": "jiti scripts/lint-fix.ts",
+    "lint:md": "jiti scripts/lint-md.ts",
+    "lint:md:fix": "jiti scripts/lint-md-fix.ts",
+    "prepare": "jiti scripts/prepare.ts",
+    "spellcheck": "jiti scripts/spellcheck.ts"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "latest",
+    "@commitlint/config-conventional": "latest",
+    "@commitlint/types": "latest",
+    "@eslint-community/eslint-plugin-eslint-comments": "latest",
+    "@eslint/compat": "latest",
+    "@eslint/js": "latest",
+    "@stylistic/eslint-plugin": "latest",
+    "@total-typescript/ts-reset": "latest",
+    "@tsconfig/strictest": "latest",
+    "@types/markdown-it": "latest",
+    "@types/node": "latest",
+    "@typescript-eslint/utils": "latest",
+    "better-typescript-lib": "latest",
+    "commitizen": "latest",
+    "cspell": "latest",
+    "cz-conventional-changelog": "latest",
+    "dprint": "latest",
+    "eslint": "latest",
+    "eslint-import-resolver-typescript": "latest",
+    "eslint-plugin-import-x": "latest",
+    "eslint-plugin-jsdoc": "latest",
+    "eslint-plugin-perfectionist": "latest",
+    "eslint-plugin-tsdoc": "latest",
+    "globals": "latest",
+    "husky": "latest",
+    "jiti": "latest",
+    "markdownlint": "latest",
+    "markdownlint-cli2": "latest",
+    "markdownlint-rule-relative-links": "latest",
+    "nano-staged": "latest",
+    "type-fest": "latest",
+    "typescript": "latest",
+    "typescript-eslint": "latest"
+  },
+  "overrides": {
+    "eslint-plugin-import": "npm:eslint-plugin-import-x@latest",
+    "type-fest": "latest"
+  }
+}
