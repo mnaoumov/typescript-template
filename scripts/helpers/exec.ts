@@ -122,7 +122,7 @@ function execString(command: string, options: ExecOption = {}, rawArgs?: string[
     cwd = process.cwd(),
     isQuiet: quiet = false,
     shouldIgnoreExitCode: ignoreExitCode = false,
-    shouldIncludeDetails: withDetails = false,
+    shouldIncludeDetails = false,
     stdin = ''
   } = options;
 
@@ -163,7 +163,7 @@ function execString(command: string, options: ExecOption = {}, rawArgs?: string[
         return;
       }
 
-      if (!withDetails) {
+      if (!shouldIncludeDetails) {
         resolve(stdout);
         return;
       }
@@ -181,7 +181,7 @@ function execString(command: string, options: ExecOption = {}, rawArgs?: string[
         return;
       }
 
-      if (!withDetails) {
+      if (!shouldIncludeDetails) {
         resolve(stdout);
         return;
       }
