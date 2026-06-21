@@ -73,6 +73,7 @@ function getCustomPluginConfigs(): Linter.Config[] {
         custom: customEslintPlugin
       },
       rules: {
+        'custom/no-unused-params-members': 'error',
         'custom/no-used-underscore-variables': 'error',
         'custom/readonly-params-options-result-members': 'error'
       }
