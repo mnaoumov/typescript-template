@@ -30,7 +30,7 @@ import { join } from 'node:path/posix';
 // eslint-disable-next-line import-x/no-rename-default -- The default export name `_default` is too confusing.
 import tseslint from 'typescript-eslint';
 
-import { customEslintPlugin } from './helpers/eslint-rules/custom-eslint-plugin.ts';
+import { obsidianDevUtilsPlugin } from './helpers/eslint-rules/obsidian-dev-utils-plugin.ts';
 import { getRootFolder } from './helpers/root.ts';
 
 const rootConfigFiles = [
@@ -70,12 +70,12 @@ function getCustomPluginConfigs(): Linter.Config[] {
     {
       files: allFiles,
       plugins: {
-        custom: customEslintPlugin
+        'obsidian-dev-utils': obsidianDevUtilsPlugin
       },
       rules: {
-        'custom/no-unused-params-members': 'error',
-        'custom/no-used-underscore-variables': 'error',
-        'custom/readonly-params-options-result-members': 'error'
+        'obsidian-dev-utils/no-unused-params-members': 'error',
+        'obsidian-dev-utils/no-used-underscore-variables': 'error',
+        'obsidian-dev-utils/readonly-params-options-result-members': 'error'
       }
     }
   ]);
@@ -631,8 +631,8 @@ function getTseslintConfigs(): Linter.Config[] {
           }
         ],
         '@typescript-eslint/prefer-readonly': 'error',
-        'custom/no-async-callback-to-unsafe-return': 'error',
-        'custom/no-used-underscore-variables': 'error'
+        'obsidian-dev-utils/no-async-callback-to-unsafe-return': 'error',
+        'obsidian-dev-utils/no-used-underscore-variables': 'error'
       }
     }
   ]);
