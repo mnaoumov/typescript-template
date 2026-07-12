@@ -1,5 +1,7 @@
 import { defineConfig } from 'vitest/config';
 
+const SHARED_EXCLUDE = ['dist', 'node_modules'];
+
 export const config = defineConfig({
   test: {
     coverage: {
@@ -14,10 +16,28 @@ export const config = defineConfig({
       reporter: ['text', 'lcov', 'html'],
       reportsDirectory: './coverage'
     },
-    environment: 'node',
-    exclude: ['dist', 'node_modules'],
+    exclude: SHARED_EXCLUDE,
     globals: false,
-    include: ['src/**/*.test.ts'],
-    passWithNoTests: true
+    passWithNoTests: true,
+    projects: [
+      {
+        test: {
+          environment: 'node',
+          exclude: [...SHARED_EXCLUDE, 'scripts/**'],
+          include: ['src/**/*.test.ts'],
+          name: 'unit-tests'
+        }
+      },
+      {
+        test: {
+          environment: 'node',
+          include: ['scripts/helpers/eslint-rules/*.test.ts'],
+          // The rule tester keeps module-level state, so the rule tests must run serially in a single worker without isolation.
+          isolate: false,
+          maxWorkers: 1,
+          name: 'eslint-rules'
+        }
+      }
+    ]
   }
 });
