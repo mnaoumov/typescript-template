@@ -24,7 +24,10 @@
     "lint:md": "jiti scripts/lint-md.ts",
     "lint:md:fix": "jiti scripts/lint-md-fix.ts",
     "prepare": "jiti scripts/prepare.ts",
-    "spellcheck": "jiti scripts/spellcheck.ts"
+    "spellcheck": "jiti scripts/spellcheck.ts",
+    "test": "jiti scripts/test.ts",
+    "test:coverage": "jiti scripts/test-coverage.ts",
+    "test:watch": "jiti scripts/test-watch.ts"
   },
   "overrides": {
     "eslint-plugin-import": "npm:eslint-plugin-import-x@^4.16.2",
@@ -43,6 +46,7 @@
     "@types/markdown-it": "^14.1.2",
     "@types/node": "^25.5.2",
     "@typescript-eslint/utils": "^8.58.0",
+    "@vitest/coverage-v8": "^4.1.10",
     "better-typescript-lib": "^2.12.0",
     "cspell": "^10.0.0",
     "czg": "^1.13.1",
@@ -63,7 +67,8 @@
     "nano-staged": "^0.9.0",
     "type-fest": "^5.5.0",
     "typescript": "^5.9.3",
-    "typescript-eslint": "^8.58.0"
+    "typescript-eslint": "^8.58.0",
+    "vitest": "^4.1.10"
   },
   "engines": {
     "node": ">=22.0.0"
