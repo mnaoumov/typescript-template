@@ -67,8 +67,12 @@ Root config files are thin re-exports — actual logic lives in `scripts/`.
 
 ## Custom ESLint rules
 
-- **`custom/no-used-underscore-variables`** — flags `_`-prefixed parameters/variables that are actually used in the function body.
-- **`custom/no-async-callback-to-unsafe-return`** — flags async functions passed as callbacks to parameters with `any`/`unknown` return type (unhandled promise rejections).
+Bundled under the `obsidian-dev-utils` plugin namespace and covered by their own unit tests (`scripts/helpers/eslint-rules/*.test.ts`):
+
+- **`obsidian-dev-utils/no-used-underscore-variables`** — flags `_`-prefixed parameters/variables that are actually used in the function body.
+- **`obsidian-dev-utils/no-async-callback-to-unsafe-return`** — flags async functions passed as callbacks to parameters with `any`/`unknown` return type (unhandled promise rejections).
+- **`obsidian-dev-utils/no-unused-params-members`** — flags members of a `*Params`/`*Options` interface that are never accessed by the function receiving it.
+- **`obsidian-dev-utils/readonly-params-options-result-members`** — requires members of `*Params`/`*Options`/`*Result` interfaces to be declared `readonly`.
 
 ## TypeScript strictness
 
