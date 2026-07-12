@@ -4,17 +4,17 @@ Opinionated TypeScript project template with strict tooling pre-configured.
 
 ## What's included
 
-| Tool                                                      | Purpose                          |
-|-----------------------------------------------------------|----------------------------------|
-| [TypeScript](https://www.typescriptlang.org/)             | Type checking (`@tsconfig/strictest`) |
-| [ESLint](https://eslint.org/)                             | Linting (strict type-checked + custom rules) |
-| [dprint](https://dprint.dev/)                             | Code formatting                  |
-| [cspell](https://cspell.org/)                             | Spell checking                   |
-| [markdownlint](https://github.com/DavidAnson/markdownlint) | Markdown linting               |
-| [commitlint](https://commitlint.js.org/)                 | Conventional commit messages     |
-| [husky](https://typicode.github.io/husky/)                | Git hooks                        |
-| [nano-staged](https://github.com/usmanyunusov/nano-staged) | Pre-commit staged file checks  |
-| [commitizen](https://commitizen-tools.github.io/commitizen/) | Commit message wizard         |
+| Tool                                                         | Purpose                                      |
+| ------------------------------------------------------------ | -------------------------------------------- |
+| [TypeScript](https://www.typescriptlang.org/)                | Type checking (`@tsconfig/strictest`)        |
+| [ESLint](https://eslint.org/)                                | Linting (strict type-checked + custom rules) |
+| [dprint](https://dprint.dev/)                                | Code formatting                              |
+| [cspell](https://cspell.org/)                                | Spell checking                               |
+| [markdownlint](https://github.com/DavidAnson/markdownlint)   | Markdown linting                             |
+| [commitlint](https://commitlint.js.org/)                     | Conventional commit messages                 |
+| [husky](https://typicode.github.io/husky/)                   | Git hooks                                    |
+| [nano-staged](https://github.com/usmanyunusov/nano-staged)   | Pre-commit staged file checks                |
+| [commitizen](https://commitizen-tools.github.io/commitizen/) | Commit message wizard                        |
 
 All scripts are written in TypeScript and executed via [jiti](https://github.com/unjs/jiti).
 
@@ -28,17 +28,17 @@ npm install
 
 ## Commands
 
-| Command               | Description               |
-|-----------------------|---------------------------|
-| `npm run build:compile` | TypeScript type check   |
-| `npm run lint`        | ESLint check              |
-| `npm run lint:fix`    | ESLint check + auto-fix   |
-| `npm run format`      | Format code (dprint)      |
-| `npm run format:check` | Check formatting         |
-| `npm run spellcheck`  | Spell check (cspell)      |
-| `npm run lint:md`     | Markdown lint             |
-| `npm run lint:md:fix` | Markdown lint + auto-fix  |
-| `npm run commit`      | Commitizen commit wizard  |
+| Command                 | Description              |
+| ----------------------- | ------------------------ |
+| `npm run build:compile` | TypeScript type check    |
+| `npm run lint`          | ESLint check             |
+| `npm run lint:fix`      | ESLint check + auto-fix  |
+| `npm run format`        | Format code (dprint)     |
+| `npm run format:check`  | Check formatting         |
+| `npm run spellcheck`    | Spell check (cspell)     |
+| `npm run lint:md`       | Markdown lint            |
+| `npm run lint:md:fix`   | Markdown lint + auto-fix |
+| `npm run commit`        | Commitizen commit wizard |
 
 ## Project structure
 
@@ -67,8 +67,12 @@ Root config files are thin re-exports — actual logic lives in `scripts/`.
 
 ## Custom ESLint rules
 
-- **`custom/no-used-underscore-variables`** — flags `_`-prefixed parameters/variables that are actually used in the function body.
-- **`custom/no-async-callback-to-unsafe-return`** — flags async functions passed as callbacks to parameters with `any`/`unknown` return type (unhandled promise rejections).
+Bundled under the `obsidian-dev-utils` plugin namespace and covered by their own unit tests (`scripts/helpers/eslint-rules/*.test.ts`):
+
+- **`obsidian-dev-utils/no-used-underscore-variables`** — flags `_`-prefixed parameters/variables that are actually used in the function body.
+- **`obsidian-dev-utils/no-async-callback-to-unsafe-return`** — flags async functions passed as callbacks to parameters with `any`/`unknown` return type (unhandled promise rejections).
+- **`obsidian-dev-utils/no-unused-params-members`** — flags members of a `*Params`/`*Options` interface that are never accessed by the function receiving it.
+- **`obsidian-dev-utils/readonly-params-options-result-members`** — requires members of `*Params`/`*Options`/`*Result` interfaces to be declared `readonly`.
 
 ## TypeScript strictness
 
@@ -76,7 +80,7 @@ Extends [`@tsconfig/strictest`](https://github.com/tsconfig/bases/blob/main/base
 
 - `skipLibCheck: false` — checks all declaration files including `node_modules`
 - [`@total-typescript/ts-reset`](https://github.com/total-typescript/ts-reset) — fixes built-in type definitions
-- [`better-typescript-lib`](https://github.com/user/user/better-typescript-lib) — improved standard library types
+- [`better-typescript-lib`](https://github.com/uhyo/better-typescript-lib) — improved standard library types
 - `verbatimModuleSyntax: true` — enforces explicit `import type`
 
 ## Pre-commit hooks

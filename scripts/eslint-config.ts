@@ -1,5 +1,5 @@
 /**
- * @packageDocumentation
+ * @file
  *
  * ESLint configuration for TypeScript projects with various plugins.
  *
@@ -12,8 +12,6 @@
 import type { Linter } from 'eslint';
 
 import commentsConfigs from '@eslint-community/eslint-plugin-eslint-comments/configs';
-// eslint-disable-next-line import-x/named -- Named export exists but not detected due to CJS/ESM interop.
-import { includeIgnoreFile } from '@eslint/compat';
 import eslint from '@eslint/js';
 // eslint-disable-next-line import-x/no-rename-default -- The default export name `plugin` is too confusing.
 import stylistic from '@stylistic/eslint-plugin';
@@ -24,7 +22,10 @@ import jsdoc from 'eslint-plugin-jsdoc';
 import { configs as perfectionistConfigs } from 'eslint-plugin-perfectionist';
 /* v8 ignore start -- Declarative ESLint rule/plugin configuration; correctness is verified by running ESLint, not unit tests. */
 import eslintPluginTsdoc from 'eslint-plugin-tsdoc';
-import { defineConfig } from 'eslint/config';
+import {
+  defineConfig,
+  includeIgnoreFile
+} from 'eslint/config';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path/posix';
 // eslint-disable-next-line import-x/no-rename-default -- The default export name `_default` is too confusing.
@@ -75,7 +76,9 @@ function getCustomPluginConfigs(): Linter.Config[] {
       rules: {
         'obsidian-dev-utils/no-unused-params-members': 'error',
         'obsidian-dev-utils/no-used-underscore-variables': 'error',
-        'obsidian-dev-utils/readonly-params-options-result-members': 'error'
+        'obsidian-dev-utils/params-options-name-match': 'error',
+        'obsidian-dev-utils/readonly-params-options-result-members': 'error',
+        'obsidian-dev-utils/require-method-template': 'error'
       }
     }
   ]);
@@ -272,10 +275,10 @@ function getImportXConfigs(): Linter.Config[] {
   return defineConfig([
     {
       extends: [
-        eslintPluginImportXFlatConfigs.recommended as Linter.Config,
-        eslintPluginImportXFlatConfigs.typescript as Linter.Config,
-        eslintPluginImportXFlatConfigs.errors as Linter.Config,
-        eslintPluginImportXFlatConfigs.warnings as Linter.Config
+        eslintPluginImportXFlatConfigs.recommended,
+        eslintPluginImportXFlatConfigs.typescript,
+        eslintPluginImportXFlatConfigs.errors,
+        eslintPluginImportXFlatConfigs.warnings
       ],
       files: allFiles,
       rules: {
@@ -351,7 +354,6 @@ function getJsdocsConfigs(): Linter.Config[] {
           'error',
           {
             definedTags: [
-              'packageDocumentation',
               'remarks',
               'typeParam'
             ]
@@ -365,18 +367,7 @@ function getJsdocsConfigs(): Linter.Config[] {
          */
         'jsdoc/no-blank-blocks': ['error', { enableFixer: false }],
         'jsdoc/require-description': 'error',
-        'jsdoc/require-file-overview': [
-          'error',
-          {
-            tags: {
-              packageDocumentation: {
-                initialCommentsOnly: true,
-                mustExist: true,
-                preventDuplicates: true
-              }
-            }
-          }
-        ],
+        'jsdoc/require-file-overview': 'error',
         'jsdoc/require-jsdoc': [
           'error',
           {
