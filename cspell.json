@@ -15,6 +15,7 @@
     "nvmrc",
     "paperio",
     "TSES",
-    "Tsdocs"
+    "Tsdocs",
+    "uppercased"
   ]
 }
