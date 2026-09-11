@@ -48,7 +48,7 @@ npm install
 │   └── helpers/                   # Shared utilities
 │       ├── exec.ts                # Command execution with batching
 │       ├── root.ts                # Project root resolution, execFromRoot
-│       ├── type-guards.ts         # assertNonNullable, ensureNonNullable
+│       ├── type-guards.ts         # assertNever, assertNonNullable, ensureNonNullable
 │       ├── eslint.ts              # ESLint runner
 │       ├── format.ts              # dprint runner
 │       ├── markdownlint.ts        # markdownlint runner
