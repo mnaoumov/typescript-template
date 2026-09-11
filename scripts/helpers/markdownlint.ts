@@ -15,7 +15,7 @@ interface LintOptions {
 export async function lint(options?: LintOptions): Promise<void> {
   const { paths, shouldFix = false } = options ?? {};
   const targets = paths?.length ? paths : ['.'];
-  await execFromRoot(['npx', 'markdownlint-cli2', ...(shouldFix ? ['--fix'] : []), { batchedArgs: targets }]);
+  await execFromRoot(['npx', 'markdownlint-cli2', ...(shouldFix ? ['--fix'] : []), { batchedArguments: targets }]);
 
   const mdFiles = paths?.length
     ? paths.map((p) => toPosixPath(relative(process.cwd(), p)) || p)
@@ -23,6 +23,10 @@ export async function lint(options?: LintOptions): Promise<void> {
       exclude: [
         '.git/**',
         'dist/**',
+        // A repo with a documentation site under `docs/` validates that markdown in `docs:build`, against the BUILT html.
+        // Linkinator would resolve a base-absolute in-site link (`/<site-base>/guides/...`) against the containing folder instead.
+        // So every one of those links would 404 here.
+        'docs/**',
         'node_modules/**'
       ]
     }));
@@ -36,17 +40,17 @@ export async function lint(options?: LintOptions): Promise<void> {
     '--retry-errors-jitter',
     '5',
     '--url-rewrite-search',
-    'https://www\\.npmjs\\.com/package/',
+    String.raw`https://www\.npmjs\.com/package/`,
     '--url-rewrite-replace',
     'https://registry.npmjs.org/',
-    { batchedArgs: mdFiles }
+    { batchedArguments: mdFiles }
   ]);
 }
 
 async function toArray<T>(iter: AsyncIterableIterator<T>): Promise<T[]> {
-  const arr: T[] = [];
+  const array: T[] = [];
   for await (const item of iter) {
-    arr.push(item);
+    array.push(item);
   }
-  return arr;
+  return array;
 }
