@@ -6,6 +6,7 @@ import {
   toCanonical
 } from './helpers/check-project-types.ts';
 import { exitIfScriptDisabled } from './helpers/env-toggle.ts';
+import { resolveToolCommand } from './helpers/package-manager.ts';
 import {
   execFromRoot,
   getRootFolder
@@ -18,7 +19,7 @@ const NODE_MODULES_SEGMENT = '/node_modules/';
 await main();
 
 async function main(): Promise<void> {
-  await execFromRoot('tsc --build --force');
+  await execFromRoot([...resolveToolCommand({ tool: 'tsc' }), '--build', '--force']);
 
   if (!validateProjectTypes()) {
     throw new Error('TypeScript declaration validation failed.');
