@@ -16,6 +16,7 @@
   "type": "module",
   "scripts": {
     "build:compile": "jiti scripts/build-compile.ts",
+    "check:vendored-eslint-rules": "jiti scripts/check-vendored-eslint-rules.ts",
     "commit": "jiti scripts/commit.ts",
     "format": "jiti scripts/format.ts",
     "format:check": "jiti scripts/format-check.ts",
