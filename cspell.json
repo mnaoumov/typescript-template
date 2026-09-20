@@ -7,6 +7,7 @@
     "scripts/helpers/@types/markdownlint-cli2-config-schema.d.ts"
   ],
   "words": [
+    "bivariant",
     "degit",
     "Jsdocs",
     "linkinator",
