@@ -34,6 +34,11 @@ TypeScript project template with strict tooling: ESLint (strict type-checked), d
 - **`scripts/`** — all npm script entry points (`jiti scripts/<name>.ts`)
 - **`scripts/helpers/`** — shared utilities (exec, root, format, eslint, markdownlint, package-manager, type-guards)
 - **`scripts/helpers/eslint-rules/`** — custom ESLint rules under the `obsidian-dev-utils` plugin namespace, each with a `*.test.ts`: `no-async-callback-to-unsafe-return`, `no-unused-params-members`, `no-used-underscore-variables`, `params-options-name-match`, `readonly-params-options-result-members`, `require-method-template`
+- **Those rule sources are VENDORED COPIES of `obsidian-dev-utils/src/script-utils/linters/eslint-rules/`, not local code — take an upstream change whole rather than hand-editing one.** The `*.test.ts` files and `rule-tester-helper.ts` are byte-identical to upstream; the sources carry exactly three standing deltas, and anything else is drift to reconcile:
+  1. `from '../../../type-guards.ts'` becomes `from '../type-guards.ts'` — the helper sits one level up here, not three.
+  2. Inline `// eslint-disable-next-line unicorn/…` comments are stripped. This repo does not install `eslint-plugin-unicorn`, and ESLint fails the **entire** run with *"Definition for rule was not found"* on an unresolvable rule reference — a file-scoped `'unicorn/…': 'off'` override fails the same way, so stripping is the only shape available.
+  3. `require-method-template.ts` reads its named groups with the local `ensureNonNullable` instead of upstream's `getMandatoryNamedGroup`, whose module is a 238-line `reg-exp.ts` no sibling vendors. The file says so at the import.
+  `require-method-template` is vendored **only** here; `obsidian-test-mocks`, `obsidian-typings-crawler` and `obsidian-integration-testing` carry the other five.
 - **Testing** — vitest, three projects, and which one collects a file is decided entirely by where the file lives:
   - `unit-tests` — `src/**/*.test.ts`, with `scripts/**` excluded outright. Empty in the template, which is why the root config sets `passWithNoTests`.
   - `eslint-rules` — `scripts/helpers/eslint-rules/*.test.ts`. Non-isolated and single-worker, because the rule tester keeps module-level state; `tsconfig.eslint-test.json` types the one type-aware rule.
