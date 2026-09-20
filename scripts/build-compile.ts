@@ -18,19 +18,7 @@ const NODE_MODULES_SEGMENT = '/node_modules/';
 
 await main();
 
-async function main(): Promise<void> {
-  await execFromRoot([...resolveToolCommand({ tool: 'tsc' }), '--build', '--force']);
-
-  if (!validateProjectTypes()) {
-    throw new Error('TypeScript declaration validation failed.');
-  }
-}
-
-function shouldKeepProjectFile(fileName: string, rootCanonical: string): boolean {
-  return fileName.startsWith(`${rootCanonical}/`) && !fileName.includes(NODE_MODULES_SEGMENT);
-}
-
-function validateProjectTypes(): boolean {
+function areProjectTypesValid(): boolean {
   const root = getRootFolder();
 
   if (!root) {
@@ -40,13 +28,23 @@ function validateProjectTypes(): boolean {
   const rootCanonical = toCanonical(root);
   const { fileNames, options } = parseTsConfig(join(root, 'tsconfig.json'));
 
-  if (!options.skipLibCheck) {
-    return true;
-  }
+  return options.skipLibCheck
+    ? checkProjectTypes({
+      options,
+      rootNames: fileNames,
+      shouldKeepFile: (fileName) => shouldKeepProjectFile(fileName, rootCanonical)
+    })
+    : true;
+}
 
-  return checkProjectTypes({
-    options,
-    rootNames: fileNames,
-    shouldKeepFile: (fileName) => shouldKeepProjectFile(fileName, rootCanonical)
-  });
+async function main(): Promise<void> {
+  await execFromRoot([...resolveToolCommand({ tool: 'tsc' }), '--build', '--force']);
+
+  if (!areProjectTypesValid()) {
+    throw new Error('TypeScript declaration validation failed.');
+  }
+}
+
+function shouldKeepProjectFile(fileName: string, rootCanonical: string): boolean {
+  return fileName.startsWith(`${rootCanonical}/`) && !fileName.includes(NODE_MODULES_SEGMENT);
 }

@@ -22,6 +22,8 @@ import jsdoc from 'eslint-plugin-jsdoc';
 import { configs as perfectionistConfigs } from 'eslint-plugin-perfectionist';
 /* v8 ignore start -- Declarative ESLint rule/plugin configuration; correctness is verified by running ESLint, not unit tests. */
 import eslintPluginTsdoc from 'eslint-plugin-tsdoc';
+// eslint-disable-next-line import-x/no-rename-default -- The default export name `eslintPluginUnicorn` restates the package name.
+import unicorn from 'eslint-plugin-unicorn';
 import {
   defineConfig,
   includeIgnoreFile
@@ -63,7 +65,8 @@ export const configs = defineConfig(
   ...getCustomPluginConfigs(),
   ...getJsdocsConfigs(),
   ...getNoRestrictedSyntaxRulesConfigs(),
-  ...getTsdocsConfigs()
+  ...getTsdocsConfigs(),
+  ...getUnicornConfigs()
 );
 
 function getCustomPluginConfigs(): Linter.Config[] {
@@ -284,10 +287,7 @@ function getEslintImportResolverTypescriptConfigs(): Linter.Config[] {
 
 function getGitIgnoreConfigs(): Linter.Config[] {
   const gitignorePath = join(getRootFolder() ?? '', '.gitignore');
-  if (!existsSync(gitignorePath)) {
-    return [];
-  }
-  return [includeIgnoreFile(gitignorePath)];
+  return existsSync(gitignorePath) ? [includeIgnoreFile(gitignorePath)] : [];
 }
 
 function getImportXConfigs(): Linter.Config[] {
@@ -614,6 +614,7 @@ function getTseslintConfigs(): Linter.Config[] {
             jsx: true
           },
           projectService: true,
+          // eslint-disable-next-line unicorn/name-replacements -- `tsconfigRootDir` is `typescript-eslint`'s option name, which has to be spelled the way `typescript-eslint` reads it.
           tsconfigRootDir: getRootFolder() ?? ''
         }
       },
@@ -631,18 +632,194 @@ function getTseslintConfigs(): Linter.Config[] {
         '@typescript-eslint/no-unused-vars': [
           'error',
           {
+            // eslint-disable-next-line unicorn/name-replacements -- `args` is ESLint's option name, which has to be spelled the way ESLint reads it.
             args: 'all',
+            // eslint-disable-next-line unicorn/name-replacements -- `argsIgnorePattern` is `typescript-eslint`'s option name, which has to be spelled the way `typescript-eslint` reads it.
             argsIgnorePattern: '^_',
             caughtErrors: 'all',
             caughtErrorsIgnorePattern: '^_',
             destructuredArrayIgnorePattern: '^_',
             ignoreRestSiblings: true,
+            // eslint-disable-next-line unicorn/name-replacements -- `varsIgnorePattern` is `typescript-eslint`'s option name, which has to be spelled the way `typescript-eslint` reads it.
             varsIgnorePattern: '^_'
           }
         ],
         '@typescript-eslint/prefer-readonly': 'error',
         'obsidian-dev-utils/no-async-callback-to-unsafe-return': 'error',
         'obsidian-dev-utils/no-used-underscore-variables': 'error'
+      }
+    }
+  ]);
+}
+
+function getUnicornConfigs(): Linter.Config[] {
+  return defineConfig([
+    {
+      extends: [unicorn.configs.recommended],
+      files: allFiles,
+      rules: {
+        /*
+         * The rule's default prefixes force ungrammatical names, so these two EXTEND the defaults (`is`, `are`,
+         * `has`, `can`, `should`, ...) rather than replace them — a boolean with no boolean-reading prefix at all
+         * is still rejected. Only the two the repo actually needs are added, rather than the longer list the
+         * sibling configs carry: the list is bidirectional, so every prefix added also asserts that anything
+         * named with it IS a boolean, and an entry no report asks for buys that assertion for nothing. `check`
+         * answers `checkProjectTypes`, and `contains` answers `containsPromiseReference` in a vendored rule
+         * source, which cannot be renamed here at all.
+         */
+        'unicorn/consistent-boolean-name': [
+          'error',
+          {
+            prefixes: {
+              check: true,
+              contains: true
+            }
+          }
+        ],
+        /*
+         * The default style for `node:path` is a default import, but every `node:` module here is imported by
+         * name. Configure the rule to enforce the style actually in use.
+         */
+        'unicorn/import-style': [
+          'error',
+          {
+            styles: {
+              // Keyed by the UNPREFIXED module name: the rule's own table uses `path`, so a `node:path` key never matches.
+              path: {
+                named: true
+              }
+            }
+          }
+        ],
+        /*
+         * `checkProperties` is load-bearing rather than a preference: the two inline `unicorn/name-replacements`
+         * disables that `scripts/helpers/eslint-rules/require-method-template.ts` takes from upstream sit on the
+         * object property `paramName:`, and the rule's default never reaches a property — so with the default
+         * they would be UNUSED directives, which `lint:fix` deletes, rewriting a file
+         * `check:vendored-eslint-rules` asserts byte-identity on.
+         *
+         * Each disabled replacement below is established vocabulary here, and each answers a report that was
+         * measured rather than anticipated:
+         *
+         * - `params` is the parameter-bag convention that `obsidian-dev-utils/params-options-name-match` above
+         *   ENFORCES — bag types must be named `<Owner>Params` / `<Owner>Options` — so expanding it would put
+         *   the two rules in direct contradiction.
+         * - `docs` is ESLint's own `meta.docs` key, which every rule source here declares.
+         * - `dev` and `utils` spell the `obsidian-dev-utils` plugin namespace these custom rules are registered
+         *   under, so expanding them would rename the plugin after nothing.
+         * - `env` and `lib` name foreign surfaces: environment variables, and TypeScript's `skipLibCheck`.
+         *
+         * NOTE: this rule's autofix is NOT reference-aware for declarations that participate in a contract —
+         * enum members, interface members and TypeScript parameter properties are renamed while their references
+         * are left dangling. Apply its reports by hand; never run `--fix` over it.
+         */
+        'unicorn/name-replacements': [
+          'error',
+          {
+            checkProperties: true,
+            replacements: {
+              dev: false,
+              docs: false,
+              env: false,
+              lib: false,
+              params: false,
+              utils: false
+            }
+          }
+        ],
+        /*
+         * `null` is the absent-value convention this repo's helpers are typed on: `getRootFolder`,
+         * `readIndexContent` and `fetchUpstreamText` all declare `null | T` and are read through `=== null`, and
+         * the Node APIs beneath them (`spawn`'s `stdio` slots, `execSync`'s `encoding`) hand back `null` too.
+         * The rule cannot tell that convention from an accidental `null`, and following it would mean retyping
+         * the surface rather than annotating a site.
+         */
+        'unicorn/no-null': 'off',
+        /*
+         * `checkArrowFunctionBody` rewrites `() => undefined` to `() => {}`, which `no-empty-function` above
+         * reports — the two rules are in direct contradiction on the one site that fires
+         * (`mockImplementation(() => undefined)`). The rule's remaining cases are still worth having.
+         */
+        'unicorn/no-useless-undefined': [
+          'error',
+          {
+            checkArrowFunctionBody: false
+          }
+        ],
+        // The repo already spells encodings the way the Encoding Standard does (`utf-8`), which is also what `TextDecoder` reports. Keep the rule enforcing consistency, in the direction already in use.
+        'unicorn/text-encoding-identifier-case': [
+          'error',
+          {
+            withDash: true
+          }
+        ]
+      }
+    },
+    {
+      // Every script here is a CLI entry point, where exiting with a status code is the interface — the same reason `no-console` is carved out for them above.
+      files: scriptFiles,
+      rules: {
+        'unicorn/no-process-exit': 'off',
+        /*
+         * Every report is `const [, , ...rest] = process.argv`, whose two ignored slots are the node binary and
+         * the script path. That is what `process.argv` IS, and naming the two holes adds no information.
+         */
+        'unicorn/no-unreadable-array-destructuring': 'off'
+      }
+    },
+    {
+      /*
+       * A module-level fixture assigned from `beforeEach` is the standard test shape. The rule is right about
+       * production code, where the fix is to hold the state in a `const` object instead; in tests that would
+       * replace every `temporaryRoot` with `STATE.temporaryRoot` and make the file read worse, since the fixture
+       * is reset per test by design.
+       */
+      files: testFiles,
+      rules: {
+        'unicorn/no-top-level-assignment-in-function': 'off'
+      }
+    },
+    {
+      /*
+       * A generated declaration file, reproduced from `markdownlint-cli2`'s own JSON schema. Its union member
+       * order and its type names both come from the generator, so neither is ours to change: renaming a type
+       * here would just be undone the next time the schema is regenerated, and the three repos that carry this
+       * file carry it byte-identically.
+       */
+      files: ['scripts/helpers/@types/markdownlint-cli2-config-schema.d.ts'],
+      rules: {
+        'unicorn/name-replacements': 'off',
+        'unicorn/prefer-type-literal-last': 'off'
+      }
+    },
+    {
+      /*
+       * `toArray` is shared byte-for-byte with `obsidian-test-mocks` and `obsidian-typings-crawler`, which
+       * compile on an ES2022 floor where `Array.fromAsync` does not exist. It is reachable here (`lib: ES2024`),
+       * but following the rule would collapse a generic helper into a one-line wrapper and make this the only
+       * copy of an otherwise identical file. Scoped to the one file rather than turned off outright, so the rest
+       * of the repo keeps the check.
+       */
+      files: ['scripts/helpers/markdownlint.ts'],
+      rules: {
+        'unicorn/prefer-array-from-async': 'off'
+      }
+    },
+    {
+      /*
+       * These are VENDORED byte-identical copies of `obsidian-dev-utils`' rule sources, asserted by
+       * `npm run check:vendored-eslint-rules` — so a report here can never be answered by editing the file, and
+       * upstream carries no inline disable for either rule because it turns both off in its own config.
+       *
+       * What is deliberately NOT turned off here is `unicorn/no-useless-recursion` and
+       * `unicorn/name-replacements`, which upstream DOES answer with inline disables. Keeping them on is what
+       * makes those three directives used rather than unused, and so what lets this repo take upstream's bytes
+       * whole instead of stripping the lines — see the transform arms in `scripts/check-vendored-eslint-rules.ts`.
+       */
+      files: ['scripts/helpers/eslint-rules/**/*.ts'],
+      rules: {
+        'unicorn/no-break-in-nested-loop': 'off',
+        'unicorn/no-unreadable-for-of-expression': 'off'
       }
     }
   ]);
