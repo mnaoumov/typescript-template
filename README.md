@@ -28,17 +28,18 @@ npm install
 
 ## Commands
 
-| Command                 | Description              |
-| ----------------------- | ------------------------ |
-| `npm run build:compile` | TypeScript type check    |
-| `npm run lint`          | ESLint check             |
-| `npm run lint:fix`      | ESLint check + auto-fix  |
-| `npm run format`        | Format code (dprint)     |
-| `npm run format:check`  | Check formatting         |
-| `npm run spellcheck`    | Spell check (cspell)     |
-| `npm run lint:md`       | Markdown lint            |
-| `npm run lint:md:fix`   | Markdown lint + auto-fix |
-| `npm run commit`        | Commitizen commit wizard |
+| Command                               | Description                                       |
+| ------------------------------------- | ------------------------------------------------- |
+| `npm run build:compile`               | TypeScript type check                             |
+| `npm run lint`                        | ESLint check                                      |
+| `npm run lint:fix`                    | ESLint check + auto-fix                           |
+| `npm run format`                      | Format code (dprint)                              |
+| `npm run format:check`                | Check formatting                                  |
+| `npm run spellcheck`                  | Spell check (cspell)                              |
+| `npm run lint:md`                     | Markdown lint                                     |
+| `npm run lint:md:fix`                 | Markdown lint + auto-fix                          |
+| `npm run check:vendored-eslint-rules` | Assert the vendored ESLint rules match upstream   |
+| `npm run commit`                      | Commitizen commit wizard                          |
 
 ## Project structure
 
@@ -52,7 +53,8 @@ npm install
 │       ├── eslint.ts              # ESLint runner
 │       ├── format.ts              # dprint runner
 │       ├── markdownlint.ts        # markdownlint runner
-│       └── eslint-rules/          # Custom ESLint rules
+│       ├── git-content.ts         # Reads a tracked file out of the git index
+│       └── eslint-rules/          # Custom ESLint rules (vendored — see below)
 ├── eslint.config.mts              # → scripts/eslint-config.ts
 ├── commitlint.config.ts           # → scripts/commitlint-config.ts
 ├── .markdownlint-cli2.mjs         # → scripts/markdownlint-cli2-config.ts
@@ -73,6 +75,12 @@ Bundled under the `obsidian-dev-utils` plugin namespace and covered by their own
 - **`obsidian-dev-utils/no-async-callback-to-unsafe-return`** — flags async functions passed as callbacks to parameters with `any`/`unknown` return type (unhandled promise rejections).
 - **`obsidian-dev-utils/no-unused-params-members`** — flags members of a `*Params`/`*Options` interface that are never accessed by the function receiving it.
 - **`obsidian-dev-utils/readonly-params-options-result-members`** — requires members of `*Params`/`*Options`/`*Result` interfaces to be declared `readonly`.
+- **`obsidian-dev-utils/params-options-name-match`** — requires a parameter-bag type to be named after its owner, with `Params` for a sole required bag and `Options` otherwise.
+- **`obsidian-dev-utils/require-method-template`** — requires a `@typeParam`/`@template` JSDoc tag for each of a generic *method*'s type parameters, which `eslint-plugin-jsdoc`'s `require-template` does not reach.
+
+These sources are **vendored copies** of [`obsidian-dev-utils`](https://github.com/mnaoumov/obsidian-dev-utils)' `src/script-utils/linters/eslint-rules/`, not local code: this repo depends on nothing from that package, so the rules are hand-copied rather than imported. Take an upstream change whole rather than hand-editing one.
+
+`npm run check:vendored-eslint-rules` enforces that. It lists upstream's directory, fetches each source, applies the handful of recorded deltas as *transform arms*, and asserts byte-identity — so accepting a new divergence is a code change that every later run then enforces, rather than a comment nothing reads. It runs from the pre-commit hook and in CI, reads this repo's side out of the git index so it cannot race `lint:fix`, and is turned off for a run with `CHECK_VENDORED_ESLINT_RULES=0`.
 
 ## TypeScript strictness
 
