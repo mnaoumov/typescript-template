@@ -157,18 +157,12 @@ const TRANSFORM_ARMS: readonly TransformArm[] = [
     reason: 'Upstream sits three levels under `src/script-utils/`, so it reaches `type-guards.ts` by `../../../`. A vendored tree sits directly beside its copy of that helper.'
   },
   {
-    apply: (text) => text.split('\n').filter((line) => !UNICORN_DISABLE_LINE_PATTERN.test(line)).join('\n'),
-    fileNames: [],
-    reason: 'Upstream carries inline `unicorn/…` disables, and this repo installs no `eslint-plugin-unicorn` at all - ESLint fails a WHOLE run on an unresolvable rule reference, and a file-scoped `\'unicorn/…\': \'off\'` override fails the same way, so stripping the line is the only shape available. This arm takes every file rather than a named one, because the rules that carry such a line upstream are not a fixed set: today they are `no-async-callback-to-unsafe-return.ts` and `require-method-template.ts`.'
-  },
-  {
-    apply: (text) => text.replace(UPSTREAM_REG_EXP_IMPORT, LOCAL_TYPE_GUARDS_IMPORT).replace(UPSTREAM_NAMED_GROUP_READS, LOCAL_NAMED_GROUP_READS),
+    // The replacements are passed as functions rather than as strings so that no `$`-sequence in them is read as a capture-group reference.
+    apply: (text) => text.replace(UPSTREAM_REG_EXP_IMPORT, () => LOCAL_TYPE_GUARDS_IMPORT).replace(UPSTREAM_NAMED_GROUP_READS, () => LOCAL_NAMED_GROUP_READS),
     fileNames: ['require-method-template.ts'],
     reason: 'Upstream reads this rule\'s named groups with `getMandatoryNamedGroup` from its own `reg-exp.ts`, a 238-line module carrying an enum, a flag-merger class and `oneOf`. Vendoring all of that for one three-line call site would invent a divergence axis no sibling has, so the local `ensureNonNullable` serves instead. This repo is the only one that vendors this rule, which is why no sibling carries this arm.'
   }
 ];
-
-const UNICORN_DISABLE_LINE_PATTERN = /^\s*\/\/ eslint-disable-next-line unicorn\//;
 
 const UPSTREAM_BASE_URL = 'https://raw.githubusercontent.com/mnaoumov/obsidian-dev-utils/main/src/script-utils/linters/eslint-rules';
 
@@ -221,7 +215,7 @@ async function collectVendoredFiles(root: string, upstreamFileNames: ReadonlySet
   }
 
   await walk(root);
-  return found.sort((left, right) => left.localeCompare(right));
+  return found.toSorted((left, right) => left.localeCompare(right));
 }
 
 /**
