@@ -137,7 +137,7 @@ function isUnsafeReturnSignature(checker: TypeChecker, sig: Signature): boolean 
 
   // Check the syntactic return type annotation. If it contains a reference to
   // Promise/PromiseLike (directly or via a type alias), the caller explicitly
-  // Handles async returns and should not be flagged.
+  // handles async returns and should not be flagged.
   const declaration = sig.getDeclaration();
   const returnTypeNode = declaration.type;
   assertNonNullable(returnTypeNode, 'Signature declarations with any/unknown return always have a return type annotation');
@@ -145,6 +145,9 @@ function isUnsafeReturnSignature(checker: TypeChecker, sig: Signature): boolean 
   return !containsPromiseReference(checker, returnTypeNode);
 }
 
+/**
+ * ESLint rule disallowing async functions passed as callbacks to parameters with an `any` or `unknown` return type, where the returned promise is silently dropped.
+ */
 export const noAsyncCallbackToUnsafeReturn: Rule.RuleModule = {
   create(context) {
     const services = context.sourceCode.parserServices as ParserServicesWithTypeInformation;

@@ -21,6 +21,9 @@ Message ID reported when a variable carries a `_` prefix (signalling unused) but
  */
 export const MESSAGE_ID = 'noUsedUnderscoreVariables';
 
+/**
+ * ESLint rule disallowing `_`-prefixed parameters and local variables that are actually used, since the prefix advertises them as unused.
+ */
 export const noUsedUnderscoreVariables: Rule.RuleModule = {
   create(context) {
     return {
@@ -45,12 +48,10 @@ export const noUsedUnderscoreVariables: Rule.RuleModule = {
             if (!reference.isRead()) {
               return false;
             }
-            if (isParameter && bodyRange && reference.identifier.range) {
-              return reference.identifier.range[0] >= bodyRange[0]
-                && reference.identifier.range[1] <= bodyRange[1];
-            }
             // Local variables or fallback: count all reads
-            return true;
+            return isParameter && bodyRange && reference.identifier.range
+              ? reference.identifier.range[0] >= bodyRange[0] && reference.identifier.range[1] <= bodyRange[1]
+              : true;
           });
           if (hasBodyReferences) {
             context.report({
