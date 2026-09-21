@@ -38,6 +38,7 @@ npm install
 | `npm run spellcheck`                  | Spell check (cspell)                              |
 | `npm run lint:md`                     | Markdown lint                                     |
 | `npm run lint:md:fix`                 | Markdown lint + auto-fix                          |
+| `npm run check:helpers-sync`          | Assert the shared script helpers match their peer |
 | `npm run check:vendored-eslint-rules` | Assert the vendored ESLint rules match upstream   |
 | `npm run commit`                      | Commitizen commit wizard                          |
 
@@ -66,6 +67,12 @@ npm install
 ```
 
 Root config files are thin re-exports — actual logic lives in `scripts/`.
+
+## Shared script helpers
+
+Everything under `scripts/helpers/` (apart from `eslint-rules/`, which has its own gate below) is a **peer copy**, shared byte-for-byte with [`obsidian-test-mocks`](https://github.com/mnaoumov/obsidian-test-mocks) and `obsidian-typings-crawler` — most of it descended from [`obsidian-dev-utils`](https://github.com/mnaoumov/obsidian-dev-utils)' `src/script-utils/`. A change to one of these files is a change to all three.
+
+`npm run check:helpers-sync` enforces that: it lists the peer's tree, fetches each shared file, and asserts byte-identity. A file only one side carries is not drift — the comparison is over the intersection, and anything one-sided is reported as information. A deliberate difference is recorded with its reason, and the record **expires**: once the file becomes identical again, the stale claim fails, so the list cannot quietly become a place to park things. It runs from the pre-commit hook and in CI, reads this repo's side out of the git index so it cannot race `lint:fix`, and is turned off for a run with `CHECK_HELPERS_SYNC=0`.
 
 ## Custom ESLint rules
 

@@ -58,6 +58,20 @@ npm run lint:md
 npm run lint:md:fix
 ```
 
+### Shared script helpers
+
+```bash
+npm run check:helpers-sync
+```
+
+The files under `scripts/helpers/` are peer copies, shared byte-for-byte with
+[`obsidian-test-mocks`](https://github.com/mnaoumov/obsidian-test-mocks) and `obsidian-typings-crawler`. This
+compares them against the first of those and fails on any difference that is not recorded — with the reason — in
+`scripts/check-helpers-sync.ts`. A change to one of these files is a change to all three, so sync it across
+rather than hand-editing a single copy. A recorded divergence also fails once the file becomes identical
+again, so the list cannot go stale. It fetches from GitHub, so `CHECK_HELPERS_SYNC=0` turns it off for a run
+when you are offline.
+
 ### Vendored ESLint rules
 
 ```bash
@@ -81,5 +95,5 @@ npm run test:coverage
 
 - Base your PR on the `main` branch.
 - Ensure all checks pass (`build:compile`, `lint`, `format:check`, `spellcheck`, `lint:md`,
-  `check:vendored-eslint-rules`, `test`).
+  `check:helpers-sync`, `check:vendored-eslint-rules`, `test`).
 - Use [Conventional Commits](https://www.conventionalcommits.org/) for your commit messages.
