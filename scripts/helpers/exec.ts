@@ -196,24 +196,92 @@ function execString(command: string, options: ExecOption = {}, rawArguments?: st
   });
 }
 
+/**
+ * Runs one over-long command as several, and reports what the batches actually did.
+ *
+ * Details are forced ON for every batch whatever the caller asked for, because an aggregate cannot carry an
+ * exit code it never collected. This used to return a hard-coded `exitCode: 0` with an empty `stderr`, so a
+ * caller that asked for details was told every batch had succeeded however they ended. That was latent only
+ * while nothing classified exit codes -- with `shouldIgnoreExitCode` left false, {@link execString} still
+ * rejects on the first failing batch, so the failure surfaced as a rejection -- and the moment a caller
+ * both ignores exit codes and reads them back, as the lint hop now does, it becomes a silent green. The
+ * batched path is not hypothetical: it is how `lint:fix` runs under nano-staged with a long staged file
+ * list.
+ *
+ * The FIRST failing batch is the one carried. A later batch's code settles nothing the first has not
+ * already settled, and the first is where a reader has to start looking. Both streams are concatenated
+ * whole, so nothing any batch said is dropped on the way out.
+ *
+ * @param baseCommand - The command line every batch shares, already quoted.
+ * @param batches - The argument batches, each already known to fit.
+ * @param options - What the caller asked for, which decides only what is returned.
+ * @returns The aggregate, in whichever of the two shapes the caller asked for.
+ */
 async function executeBatches(baseCommand: string, batches: string[][], options: ExecOption): Promise<ExecResult | string> {
-  const results: string[] = [];
+  const stdoutParts: string[] = [];
+  const stderrParts: string[] = [];
+  let firstFailure: ExecResult | undefined;
 
   for (const batch of batches) {
     const batchCommand = `${baseCommand} ${batch.join(' ')}`;
-    const result = await execString(batchCommand, options);
-    if (typeof result === 'string') {
-      results.push(result);
-    }
+    // Sound because `shouldIncludeDetails` is forced true right here: `execString` returns a bare string only when it is false.
+    const result = await execString(batchCommand, { ...options, shouldIncludeDetails: true }) as ExecResult;
+
+    stdoutParts.push(result.stdout);
+    stderrParts.push(result.stderr);
+
+    const hasFailed = result.exitCode !== 0 || result.exitSignal !== null;
+    firstFailure ??= hasFailed ? result : undefined;
   }
 
-  return options.shouldIncludeDetails ? { exitCode: 0, exitSignal: null, stderr: '', stdout: results.join('\n') } : results.join('\n');
+  // A batch that said nothing contributes nothing, rather than a blank line: an aggregate `stderr` of "\n" for a run where every batch was silent reads as output, and a caller testing it for emptiness is right to.
+  const stdout = joinStreams(stdoutParts);
+
+  return options.shouldIncludeDetails
+    ? {
+      // Spelled out rather than `firstFailure?.exitCode ?? 0`, which would report a batch killed by a signal -- whose code is `null` -- as a clean 0.
+      exitCode: firstFailure === undefined ? 0 : firstFailure.exitCode,
+      exitSignal: firstFailure === undefined ? null : firstFailure.exitSignal,
+      stderr: joinStreams(stderrParts),
+      stdout
+    }
+    : stdout;
 }
 
+/**
+ * How long a command this module may build before it has to be split.
+ *
+ * On Windows the well-known 8191 is what **cmd.exe** measures ITS OWN command line against, and what cmd is
+ * handed is not the command built here: `spawn(..., { shell: true })` wraps it as
+ * `<ComSpec> /d /s /c "<command>"`. Budgeting the whole 8191 for the inner command therefore overshoots by
+ * the wrapper, and a batch built right up to the ceiling is refused by cmd with `The command line is too
+ * long.` and exit 1 -- which is not a failure of the command at all, and which {@link executeBatches} used
+ * to swallow into a hard-coded `exitCode: 0`. Measured on this machine, whose `ComSpec` is 27 characters:
+ * 8152 runs and 8153 does not, which is exactly `8191 - 27 - 12`.
+ *
+ * `ComSpec` is read rather than assumed, because it is what `spawn` itself uses and it is not the same
+ * length everywhere.
+ *
+ * Note what this still does NOT account for: {@link commandEscapeCommandLine} inserts a `^` per cmd meta
+ * character AFTER this budget has been spent, so a command whose arguments are full of them can still
+ * overshoot. Paths holding cmd meta characters are rare enough that the inflation is left out of the budget
+ * rather than guessed at.
+ *
+ * @returns The longest command line this module may hand to {@link spawnViaShell}.
+ */
 function getMaxCommandLength(): number {
-  const WINDOWS_MAX_COMMAND_LENGTH = 8191;
-  const UNIX_MAX_COMMAND_LENGTH = 131_072;
-  return process.platform === 'win32' ? WINDOWS_MAX_COMMAND_LENGTH : UNIX_MAX_COMMAND_LENGTH;
+  if (process.platform !== 'win32') {
+    const UNIX_MAX_COMMAND_LENGTH = 131_072;
+    return UNIX_MAX_COMMAND_LENGTH;
+  }
+
+  const CMD_MAX_COMMAND_LENGTH = 8191;
+  /**
+  The flags, the quotes around the inner command, and the spaces separating them, that `spawn` adds.
+  */
+  const CMD_SHELL_WRAPPER = ' /d /s /c ""';
+  const comSpec = process.env['ComSpec'] ?? String.raw`C:\Windows\system32\cmd.exe`;
+  return CMD_MAX_COMMAND_LENGTH - comSpec.length - CMD_SHELL_WRAPPER.length;
 }
 
 function handleBatchedCommand(parts: CommandPart[], options: ExecOption): Promise<ExecResult | string> | undefined {
@@ -267,6 +335,16 @@ function handleBatchedCommand(parts: CommandPart[], options: ExecOption): Promis
 
 function isExecArgument(part: CommandPart): part is ExecArgument {
   return typeof part === 'object' && 'batchedArguments' in part;
+}
+
+/**
+ * Folds one stream's per-batch pieces into the aggregate's.
+ *
+ * @param parts - What each batch wrote, in order.
+ * @returns The pieces that carry anything, newline-separated.
+ */
+function joinStreams(parts: readonly string[]): string {
+  return parts.filter((part) => part !== '').join('\n');
 }
 
 function spawnViaShell(
