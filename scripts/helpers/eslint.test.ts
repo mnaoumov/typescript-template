@@ -11,21 +11,42 @@
  *
  * The OS-level death cannot be triggered on demand, so it is pinned by its exit code alone. That is the
  * failure shape npm relays to its own caller as a plain exit `1`, so it is also the one worth pinning.
+ *
+ * The {@link lint} block underneath is about the OTHER end of the same classification: ESLint exits `0` on a
+ * run that reported warnings and no errors, so what makes `clean` mean "nothing at all" is the
+ * `--max-warnings 0` on the command line rather than anything in the classifier. That flag is therefore
+ * pinned where it is spent - in the command the child is actually given - and the child is stubbed, because
+ * this is a claim about the invocation and not about ESLint.
  */
 
 import {
+  beforeEach,
   describe,
   expect,
-  it
+  it,
+  vi
 } from 'vitest';
 
-import type { ExecResult } from './exec.ts';
+import type {
+  CommandPart,
+  ExecResult
+} from './exec.ts';
 
 import {
   classifyEslintExit,
   describeFailureToLint,
+  lint,
   LINT_PROBLEMS_MESSAGE
 } from './eslint.ts';
+import { execFromRoot } from './root.ts';
+
+vi.mock('./package-manager.ts', () => ({
+  resolveToolCommand: (): string[] => ['eslint']
+}));
+
+vi.mock('./root.ts', () => ({
+  execFromRoot: vi.fn()
+}));
 
 /**
  * The real stderr of an ESLint rule crash, transcribed from an `npm run lint` that died inside `no-empty`
@@ -177,3 +198,75 @@ describe('describeFailureToLint', () => {
     expect(message).not.toContain('Rule: "rule-6"');
   });
 });
+
+describe('lint', () => {
+  beforeEach(() => {
+    vi.mocked(execFromRoot).mockReset();
+    vi.mocked(execFromRoot).mockResolvedValue(makeResult({}));
+  });
+
+  it('spends --max-warnings 0, so a run that reported only warnings is not clean', async () => {
+    await lint();
+
+    expect(getStaticCommandParts()).toContain('--max-warnings');
+    expect(getStaticCommandParts()).toContain('0');
+  });
+
+  it('spends it as a STATIC part, so every batch of a split command line carries it', async () => {
+    await lint({ paths: ['src/a.ts', 'src/b.ts'] });
+
+    const command = getCommand();
+    const batched = command.filter((part) => typeof part !== 'string');
+
+    expect(getStaticCommandParts()).toEqual(['eslint', '--max-warnings', '0']);
+    expect(batched).toEqual([{ batchedArguments: ['src/a.ts', 'src/b.ts'] }]);
+  });
+
+  it('spends it on the fixing run too, so the two hops judge the same tree', async () => {
+    await lint({ shouldFix: true });
+
+    expect(getStaticCommandParts()).toEqual(['eslint', '--max-warnings', '0', '--fix']);
+  });
+
+  it('throws the findings message for the exit 1 that flag produces out of warnings alone', async () => {
+    vi.mocked(execFromRoot).mockResolvedValue(makeResult({
+      exitCode: 1,
+      stderr: 'ESLint found too many warnings (maximum: 0).',
+      stdout: '  1:1  warning  `jsdoc` is a namespace import  import-x/no-named-as-default-member'
+    }));
+
+    await expect(lint()).rejects.toThrow(LINT_PROBLEMS_MESSAGE);
+  });
+
+  it('stays silent when ESLint found nothing of either kind', async () => {
+    await expect(lint()).resolves.toBeUndefined();
+  });
+});
+
+/**
+ * The command {@link lint} handed the child on the one call it made.
+ *
+ * @returns Every part of it, in order.
+ */
+function getCommand(): CommandPart[] {
+  const call = vi.mocked(execFromRoot).mock.calls[0];
+  if (!call) {
+    throw new Error('lint did not run ESLint at all.');
+  }
+
+  const [command] = call;
+  if (typeof command === 'string') {
+    throw new TypeError('lint built the command as a string, so its parts cannot be read back.');
+  }
+
+  return command;
+}
+
+/**
+ * The parts of that command that are NOT the batched targets - the base command every batch is prefixed with.
+ *
+ * @returns Those parts, in order.
+ */
+function getStaticCommandParts(): string[] {
+  return getCommand().filter((part) => typeof part === 'string');
+}
