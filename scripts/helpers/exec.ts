@@ -87,8 +87,47 @@ function argvQuote(argument: string): string {
   return result;
 }
 
-function toCommandLine($arguments: string[]): string {
-  return $arguments.map((argument) => argvQuote(argument)).join(' ');
+/**
+ * The characters an argument may consist of and still reach POSIX `sh` as one literal word without quoting.
+ *
+ * Deliberately short. `=` is left out because a first word shaped `name=value` is an assignment rather than
+ * a program, and `~`, `*`, `?` and `[` because `sh` would expand them.
+ */
+const POSIX_SAFE_ARGUMENT_RE = /^[\w%+,./:@-]+$/;
+
+/**
+ * Quotes an argument for POSIX `sh`, the shell `spawn(..., { shell: true })` hands a command line to off
+ * Windows.
+ *
+ * Single quotes are the one form `sh` reads with no interpretation at all -- no expansion, no escapes -- so
+ * the only character needing care is the single quote itself: it closes the quoted run, is escaped outside
+ * it, and opens a new one.
+ *
+ * @param argument - One argument, exactly as the child should receive it.
+ * @returns The argument as a single `sh` word.
+ */
+function posixQuote(argument: string): string {
+  return POSIX_SAFE_ARGUMENT_RE.test(argument) ? argument : `'${argument.replaceAll('\'', String.raw`'\''`)}'`;
+}
+
+/**
+ * Quotes an argument for the shell this platform's command line is handed to.
+ *
+ * On Windows that is cmd.exe, which does not split arguments itself: the child does, by the
+ * `CommandLineToArgvW` rules {@link argvQuote} follows, and cmd's own meta characters are escaped later, over
+ * the whole line, by {@link commandEscapeCommandLine}. Everywhere else it is POSIX `sh`, which splits, expands
+ * and parses the line itself, so an argument has to be quoted against `sh` -- a Windows quoting there leaves
+ * `(` a syntax error, `*` a glob and `$` an expansion.
+ *
+ * @param argument - One argument, exactly as the child should receive it.
+ * @returns The argument, quoted for this platform's shell.
+ */
+function quoteArgument(argument: string): string {
+  return process.platform === 'win32' ? argvQuote(argument) : posixQuote(argument);
+}
+
+function toCommandLine($arguments: readonly string[]): string {
+  return $arguments.map((argument) => quoteArgument(argument)).join(' ');
 }
 
 const CMD_META_RE = /[()%!^"<>&|]/g;
@@ -336,7 +375,10 @@ function handleBatchedCommand(parts: CommandPart[], options: ExecOption): Promis
   const baseCommand = toCommandLine(staticParts);
   const maxCommandLength = getMaxCommandLength();
 
-  const fullCommand = `${baseCommand} ${execArgument.batchedArguments.join(' ')}`;
+  // Quoted like every other argument. They used to be joined in raw, so a batched path holding a space was
+  // split in two on every platform, and off Windows `sh` parsed a `(` as syntax and expanded a `*` itself.
+  const batchedArguments = execArgument.batchedArguments.map((argument) => quoteArgument(argument));
+  const fullCommand = `${baseCommand} ${batchedArguments.join(' ')}`;
   if (getMeasuredCommandLength(fullCommand) <= maxCommandLength) {
     return execString(fullCommand, options);
   }
@@ -344,7 +386,7 @@ function handleBatchedCommand(parts: CommandPart[], options: ExecOption): Promis
   const batches: string[][] = [];
   let currentBatch: string[] = [];
 
-  for (const argument of execArgument.batchedArguments) {
+  for (const argument of batchedArguments) {
     // The tentative command line is measured whole, every time, rather than summed from remembered
     // fragment lengths: what is measured is then the very string that will be run.
     const tentative = `${baseCommand} ${[...currentBatch, argument].join(' ')}`;
