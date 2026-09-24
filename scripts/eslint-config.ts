@@ -837,18 +837,11 @@ function getUnicornConfigs(): Linter.Config[] {
        * `unicorn/name-replacements`, which upstream DOES answer with inline disables. Keeping them on is what
        * makes those three directives used rather than unused, and so what lets this repo take upstream's bytes
        * whole instead of stripping the lines — see the transform arms in `scripts/check-vendored-eslint-rules.ts`.
-       *
-       * `unicorn/prefer-ternary` is off for a different reason: a VERSION skew. Upstream lints on
-       * `eslint-plugin-unicorn` 76, whose `prefer-logical-operator-over-ternary` rewrote a `cond ? check : true`
-       * return in `no-used-underscore-variables.ts` into an `if` + logical chain that 76's `prefer-ternary` accepts
-       * and this repo's 75 reports. Once this repo is on 76 the line is dead weight, so delete it with the bump —
-       * which waits on the peers, since 76 also reports a ternary in the shared `check-project-types.ts` helper.
        */
       files: ['scripts/helpers/eslint-rules/**/*.ts'],
       rules: {
         'unicorn/no-break-in-nested-loop': 'off',
-        'unicorn/no-unreadable-for-of-expression': 'off',
-        'unicorn/prefer-ternary': 'off'
+        'unicorn/no-unreadable-for-of-expression': 'off'
       }
     }
   ]);

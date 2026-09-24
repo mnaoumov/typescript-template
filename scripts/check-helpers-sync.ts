@@ -171,6 +171,7 @@ interface TransformArm {
  * An entry is a claim that expires: see {@link compareHelper} for the two ways it fails.
  */
 const DIVERGENCE_EXCEPTIONS: Readonly<Record<string, string>> = {
+  'scripts/helpers/check-project-types.ts': 'This repo lints on `eslint-plugin-unicorn` 76, whose `prefer-logical-operator-over-ternary` reports the peers\' `diagnostic.file ? shouldKeepFile(...) : true` return, so this copy carries the `!diagnostic.file || shouldKeepFile(...)` form `obsidian-dev-utils` already ships. The rewrite is plain code with no version dependence, so a peer can take these bytes before its own bump; the sync runs out of this repo, and the entry expires the moment the peer does.',
   'scripts/helpers/git-content.ts': 'All three copies of this file carry identical CODE; the `@file` header and the `isMissingPath` comment are worded three different ways, and this repo\'s wording is the current one on what happens outside a repository (it is thrown, not reported as an absent blob). The sync therefore runs the other way, and converging on the peer here would take a stale explanation of correct code.'
 };
 
