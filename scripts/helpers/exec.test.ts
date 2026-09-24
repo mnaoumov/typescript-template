@@ -9,6 +9,10 @@
  * nothing read the code back: with `shouldIgnoreExitCode` left false the run still rejects on the first
  * failing batch, which is what every caller relied on. These tests pin the other half.
  *
+ * The last case pins the other end of that path -- where the batches are SIZED. On Windows the command is
+ * escaped on the way to cmd.exe, a `^` per cmd meta character, and that used to happen after the length
+ * budget had been spent, so a batch that fitted at 8152 characters reached cmd at 8192 and was refused.
+ *
  * The child is a REAL `node` process over a real temp script rather than a mocked `spawn`. What is under
  * test is how several children's endings are folded into one answer, and a mock only ever proves the fold
  * was fed whatever the test decided to feed it.
@@ -52,6 +56,18 @@ const OVERSHOOT_FACTOR = 1.4;
 const ARGUMENT_LENGTH = 120;
 
 /**
+ * The characters `commandEscapeCommandLine` puts a `^` in front of, minus the double quote: `argvQuote`
+ * reaches that one first and quotes the whole argument, which measures differently and is a different test.
+ */
+const META_CHARACTERS = '()%!^<>&|';
+
+/**
+ * How often a meta character is planted. Every third is enough to inflate a full-sized batch well past the
+ * ceiling rather than marginally, so the case fails on the defect rather than on an off-by-one.
+ */
+const META_PERIOD = 3;
+
+/**
  * What the temp script writes to each stream, so the aggregate can be asked whether it kept them.
  */
 const STDOUT_MARKER = 'probe-stdout';
@@ -91,6 +107,24 @@ function countMarkers(text: string, marker: string): number {
 function makeOverlongArguments(): string[] {
   const count = Math.ceil((MAX_COMMAND_LENGTH * OVERSHOOT_FACTOR) / (ARGUMENT_LENGTH + 1));
   return Array.from({ length: count }, (_, index) => `${'a'.repeat(ARGUMENT_LENGTH - String(index).length)}${String(index)}`);
+}
+
+/**
+ * The same list, with every {@link META_PERIOD}th character replaced by a cmd meta one, so cmd.exe is handed
+ * a command line a third longer again than the one the budget was spent on.
+ *
+ * The arguments are otherwise unchanged and the probe script ignores all of them: what is under test is how
+ * the batches were SIZED, not what any child made of them.
+ *
+ * @returns The arguments, meta-heavy and still overlong.
+ */
+function makeOverlongMetaArguments(): string[] {
+  return makeOverlongArguments().map((argument) =>
+    Array.from(
+      { length: argument.length },
+      (_, index) => index % META_PERIOD === 0 ? META_CHARACTERS.charAt((index / META_PERIOD) % META_CHARACTERS.length) : argument.charAt(index)
+    ).join('')
+  );
 }
 
 beforeAll(() => {
@@ -147,5 +181,21 @@ describe('exec over a batched command', () => {
     const stdout = await exec(['node', succeedingScriptPath, { batchedArguments: makeOverlongArguments() }], { isQuiet: true });
 
     expect(countMarkers(stdout, STDOUT_MARKER)).toBe(EXPECTED_BATCH_COUNT);
+  }, TEST_TIMEOUT_IN_MILLISECONDS);
+
+  // Falsified on Windows against the code before the budget counted the escaping: cmd.exe answers the
+  // inflated batch with `The command line is too long.` on stderr and exit 1, and that batch's stdout is
+  // missing from the aggregate. Off Windows nothing escapes anything, so there the case only pins that
+  // meta-heavy arguments changed nothing.
+  it('sizes the batches by the escaped length, so a meta-heavy list still fits cmd.exe', async () => {
+    const result = await exec(['node', succeedingScriptPath, { batchedArguments: makeOverlongMetaArguments() }], {
+      isQuiet: true,
+      shouldIgnoreExitCode: true,
+      shouldIncludeDetails: true
+    });
+
+    expect(result.stderr).toBe('');
+    expect(result.exitCode).toBe(0);
+    expect(countMarkers(result.stdout, STDOUT_MARKER)).toBeGreaterThanOrEqual(EXPECTED_BATCH_COUNT);
   }, TEST_TIMEOUT_IN_MILLISECONDS);
 });
