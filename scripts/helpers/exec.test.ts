@@ -13,6 +13,10 @@
  * escaped on the way to cmd.exe, a `^` per cmd meta character, and that used to happen after the length
  * budget had been spent, so a batch that fitted at 8152 characters reached cmd at 8192 and was refused.
  *
+ * The quoting cases pin what the child RECEIVES. Batched arguments used to be joined into the command line
+ * raw, and static ones were quoted by the Windows rules on every platform, so on the Linux CI runner `sh`
+ * read a batched `(` as syntax and the sizing case above died there with `Syntax error: "(" unexpected`.
+ *
  * The child is a REAL `node` process over a real temp script rather than a mocked `spawn`. What is under
  * test is how several children's endings are folded into one answer, and a mock only ever proves the fold
  * was fed whatever the test decided to feed it.
@@ -87,6 +91,38 @@ const TEST_TIMEOUT_IN_MILLISECONDS = 60_000;
 let temporaryFolder = '';
 let failingScriptPath = '';
 let succeedingScriptPath = '';
+let argvEchoScriptPath = '';
+
+/**
+ * Arguments each of which a shell reads as something other than one literal word unless it is quoted for
+ * that shell: `sh` syntax, `sh` expansions, cmd meta characters, whitespace, both quote characters, and the
+ * empty string, which unquoted is no argument at all.
+ *
+ * A `%name%` pair is left out on purpose: cmd.exe expands it before it reads any escape, so no quoting of an
+ * argument can carry one through, and that is a limit of cmd rather than of this module.
+ */
+const HOSTILE_ARGUMENTS = [
+  'plain',
+  'two words',
+  '(parenthesized)',
+  'semi;colon',
+  '$HOME',
+  '`backtick`',
+  '*',
+  'glob?[ab]',
+  '~',
+  'a=b',
+  'single \' quote',
+  'double " quote',
+  String.raw`back\slash`,
+  'trailing backslash\\',
+  'percent 50%',
+  'bang!',
+  'caret^',
+  '<redirect>',
+  'pipe|and&',
+  ''
+];
 
 /**
  * Counts how many children contributed to a stream, which is how many batches there were.
@@ -138,6 +174,9 @@ beforeAll(() => {
 
   succeedingScriptPath = join(temporaryFolder, 'succeeding-probe.cjs');
   writeFileSync(succeedingScriptPath, `process.stdout.write('${STDOUT_MARKER}\\n');\n`);
+
+  argvEchoScriptPath = join(temporaryFolder, 'argv-echo-probe.cjs');
+  writeFileSync(argvEchoScriptPath, 'process.stdout.write(JSON.stringify(process.argv.slice(2)));\n');
 });
 
 afterAll(() => {
@@ -185,8 +224,9 @@ describe('exec over a batched command', () => {
 
   // Falsified on Windows against the code before the budget counted the escaping: cmd.exe answers the
   // inflated batch with `The command line is too long.` on stderr and exit 1, and that batch's stdout is
-  // missing from the aggregate. Off Windows nothing escapes anything, so there the case only pins that
-  // meta-heavy arguments changed nothing.
+  // missing from the aggregate. Off Windows there is no cmd escaping to budget for, and the case pins that
+  // the same arguments reach `sh` quoted: joined raw, `sh` refused every batch with `Syntax error: "("
+  // unexpected`, which is how this case first failed on the Linux CI runner.
   it('sizes the batches by the escaped length, so a meta-heavy list still fits cmd.exe', async () => {
     const result = await exec(['node', succeedingScriptPath, { batchedArguments: makeOverlongMetaArguments() }], {
       isQuiet: true,
@@ -197,5 +237,19 @@ describe('exec over a batched command', () => {
     expect(result.stderr).toBe('');
     expect(result.exitCode).toBe(0);
     expect(countMarkers(result.stdout, STDOUT_MARKER)).toBeGreaterThanOrEqual(EXPECTED_BATCH_COUNT);
+  }, TEST_TIMEOUT_IN_MILLISECONDS);
+});
+
+describe('exec over an argument array', () => {
+  it('hands every static argument to the child as exactly the string it was given', async () => {
+    const stdout = await exec(['node', argvEchoScriptPath, ...HOSTILE_ARGUMENTS], { isQuiet: true });
+
+    expect(JSON.parse(stdout)).toEqual(HOSTILE_ARGUMENTS);
+  }, TEST_TIMEOUT_IN_MILLISECONDS);
+
+  it('hands every batched argument to the child as exactly the string it was given', async () => {
+    const stdout = await exec(['node', argvEchoScriptPath, 'static (part)', { batchedArguments: HOSTILE_ARGUMENTS }], { isQuiet: true });
+
+    expect(JSON.parse(stdout)).toEqual(['static (part)', ...HOSTILE_ARGUMENTS]);
   }, TEST_TIMEOUT_IN_MILLISECONDS);
 });
