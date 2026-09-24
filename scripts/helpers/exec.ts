@@ -49,22 +49,14 @@ export function exec(command: CommandPart[] | string, options: ExecOption = {}):
     const commandLine = toCommandLine($arguments);
 
     const maxCommandLength = getMaxCommandLength();
-    return commandLine.length > maxCommandLength
-      ? Promise.reject(
-        new Error(
-          `Command line is too long (${String(commandLine.length)} chars, max ${String(maxCommandLength)} on ${process.platform}). Consider using ExecArgument with batchedArguments.`
-        )
-      )
+    return getMeasuredCommandLength(commandLine) > maxCommandLength
+      ? Promise.reject(new Error(describeTooLong(commandLine, maxCommandLength)))
       : execString(commandLine, options, $arguments);
   }
 
   const maxCommandLength = getMaxCommandLength();
-  return command.length > maxCommandLength
-    ? Promise.reject(
-      new Error(
-        `Command line is too long (${String(command.length)} chars, max ${String(maxCommandLength)} on ${process.platform}). Consider using ExecArgument with batchedArguments.`
-      )
-    )
+  return getMeasuredCommandLength(command) > maxCommandLength
+    ? Promise.reject(new Error(describeTooLong(command, maxCommandLength)))
     : execString(command, options);
 }
 
@@ -108,6 +100,27 @@ const CHILD_ENV = {
 
 function commandEscapeCommandLine(commandLine: string): string {
   return commandLine.replaceAll(CMD_META_RE, '^$&');
+}
+
+function countCommandMetaCharacters(text: string): number {
+  return text.match(CMD_META_RE)?.length ?? 0;
+}
+
+/**
+ * Says how long a command line is in the terms it is measured in, which is not always how long it looks.
+ *
+ * @param text - A command line, or a piece of one, as this module built it.
+ * @returns The measured length, naming the raw one too whenever the escaping is what inflated it.
+ */
+function describeLength(text: string): string {
+  const measuredLength = getMeasuredCommandLength(text);
+  return measuredLength === text.length
+    ? `${String(measuredLength)} chars`
+    : `${String(measuredLength)} chars after cmd escaping, ${String(text.length)} before`;
+}
+
+function describeTooLong(command: string, maxCommandLength: number): string {
+  return `Command line is too long (${describeLength(command)}, max ${String(maxCommandLength)} on ${process.platform}). Consider using ExecArgument with batchedArguments.`;
 }
 
 function execString(command: string, options: ExecOption = {}, rawArguments?: string[]): Promise<ExecResult | string> {
@@ -262,10 +275,10 @@ async function executeBatches(baseCommand: string, batches: string[][], options:
  * `ComSpec` is read rather than assumed, because it is what `spawn` itself uses and it is not the same
  * length everywhere.
  *
- * Note what this still does NOT account for: {@link commandEscapeCommandLine} inserts a `^` per cmd meta
- * character AFTER this budget has been spent, so a command whose arguments are full of them can still
- * overshoot. Paths holding cmd meta characters are rare enough that the inflation is left out of the budget
- * rather than guessed at.
+ * The per-meta-character inflation {@link commandEscapeCommandLine} adds is accounted for on the OTHER side
+ * of the comparison, by {@link getMeasuredCommandLength}, rather than as a margin subtracted here. So this
+ * ceiling is the same number whatever a command holds, and what is measured against it is the escaped copy
+ * cmd is actually handed.
  *
  * @returns The longest command line this module may hand to {@link spawnViaShell}.
  */
@@ -282,6 +295,27 @@ function getMaxCommandLength(): number {
   const CMD_SHELL_WRAPPER = ' /d /s /c ""';
   const comSpec = process.env['ComSpec'] ?? String.raw`C:\Windows\system32\cmd.exe`;
   return CMD_MAX_COMMAND_LENGTH - comSpec.length - CMD_SHELL_WRAPPER.length;
+}
+
+/**
+ * How long the command line the platform will actually measure is, which is not how long this string is.
+ *
+ * On Windows {@link spawnViaShell} hands cmd.exe an ESCAPED copy -- a `^` before every cmd meta character --
+ * and the 8191 ceiling is measured against that copy, not against the string built here. Budgeting the raw
+ * length therefore under-counts by exactly one character per meta character: a command that fitted at 8152
+ * and carried 40 of them reached cmd at 8192 and died with `The command line is too long.` and exit 1,
+ * which says nothing about the command itself. A folder named `Stuff (old)` is enough for the first half,
+ * and the batched `lint` / `lint:fix` path fills to the ceiling by construction, so the two halves do meet.
+ *
+ * The inflation is COUNTED rather than reserved as a fixed margin, because an argument list that is mostly
+ * meta characters inflates by most of its own length again, and no fixed margin is right for both that and
+ * an ordinary path. The escaped copy is measured rather than built: nothing here needs the string.
+ *
+ * @param command - A command line, or a piece of one, as this module built it, before any escaping.
+ * @returns The length that has to fit under {@link getMaxCommandLength}.
+ */
+function getMeasuredCommandLength(command: string): number {
+  return willCommandShellEscape(command) ? command.length + countCommandMetaCharacters(command) : command.length;
 }
 
 function handleBatchedCommand(parts: CommandPart[], options: ExecOption): Promise<ExecResult | string> | undefined {
@@ -303,7 +337,7 @@ function handleBatchedCommand(parts: CommandPart[], options: ExecOption): Promis
   const maxCommandLength = getMaxCommandLength();
 
   const fullCommand = `${baseCommand} ${execArgument.batchedArguments.join(' ')}`;
-  if (fullCommand.length <= maxCommandLength) {
+  if (getMeasuredCommandLength(fullCommand) <= maxCommandLength) {
     return execString(fullCommand, options);
   }
 
@@ -311,12 +345,14 @@ function handleBatchedCommand(parts: CommandPart[], options: ExecOption): Promis
   let currentBatch: string[] = [];
 
   for (const argument of execArgument.batchedArguments) {
+    // The tentative command line is measured whole, every time, rather than summed from remembered
+    // fragment lengths: what is measured is then the very string that will be run.
     const tentative = `${baseCommand} ${[...currentBatch, argument].join(' ')}`;
-    if (tentative.length > maxCommandLength) {
+    if (getMeasuredCommandLength(tentative) > maxCommandLength) {
       if (currentBatch.length === 0) {
         return Promise.reject(
           new Error(
-            `Cannot split command into batches: a single argument (${String(argument.length)} chars) plus the base command (${String(baseCommand.length)} chars) exceeds the max command length (${String(maxCommandLength)}).`
+            `Cannot split command into batches: a single argument (${describeLength(argument)}) plus the base command (${describeLength(baseCommand)}) exceeds the max command length (${String(maxCommandLength)} on ${process.platform}).`
           )
         );
       }
@@ -370,7 +406,7 @@ function spawnViaShell(
     });
   }
 
-  const shellCommand = process.platform === 'win32' ? commandEscapeCommandLine(command) : command;
+  const shellCommand = willCommandShellEscape(command) ? commandEscapeCommandLine(command) : command;
   return spawn(shellCommand, [], {
     cwd,
     env: childEnv,
@@ -381,4 +417,19 @@ function spawnViaShell(
 
 function trimEnd($string: string, suffix: string): string {
   return $string.endsWith(suffix) ? $string.slice(0, -suffix.length) : $string;
+}
+
+/**
+ * Whether this command line is the copy cmd.exe will be handed, and so the one that gets escaped.
+ *
+ * The newline case never reaches cmd at all -- {@link spawnViaShell} spawns the program directly with an
+ * argv array, which nobody escapes and which CreateProcess measures against its own far larger limit -- and
+ * off Windows there is no escaping to account for either. Both sides of that decision read this, so the
+ * budget and the spawn cannot come to different answers about the same command.
+ *
+ * @param command - A command line, or a piece of one, as this module built it.
+ * @returns Whether {@link commandEscapeCommandLine} will be applied to it.
+ */
+function willCommandShellEscape(command: string): boolean {
+  return process.platform === 'win32' && !command.includes('\n');
 }
