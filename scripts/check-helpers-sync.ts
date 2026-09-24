@@ -171,7 +171,6 @@ interface TransformArm {
  * An entry is a claim that expires: see {@link compareHelper} for the two ways it fails.
  */
 const DIVERGENCE_EXCEPTIONS: Readonly<Record<string, string>> = {
-  'scripts/helpers/git-content.test.ts': 'Taken from the peer on 2026-09-23, with the sync then running the other way: this repo carries the authoritative `git-content.ts` and was the only one of the three with no test for it. Two of the peer\'s five fixtures are its own repo - its manifest name, and a vendored Inter TTF for the binary case, which has NO fixture here because none of this repo\'s tracked files contains a NUL byte - so that one case builds a scratch repo and says why. A sixth case is added, pinning the distinction the divergence in `git-content.ts` below is entirely about: a folder that is not a repository is thrown, not reported as an absent blob. Deleted when the peer has taken the added case and parameterized the two fixtures.',
   'scripts/helpers/git-content.ts': 'All three copies of this file carry identical CODE; the `@file` header and the `isMissingPath` comment are worded three different ways, and this repo\'s wording is the current one on what happens outside a repository (it is thrown, not reported as an absent blob). The sync therefore runs the other way, and converging on the peer here would take a stale explanation of correct code.'
 };
 
@@ -202,11 +201,11 @@ const ESLINT_RULES_PATH_PREFIX = 'scripts/helpers/eslint-rules/';
  * the two copies turn out identical outright, a side carries no `@file` block for the difference to be in, or
  * the bodies differ, which is drift the entry does not cover.
  *
- * **Empty is the correct state for this repo today.** Neither of the two `git-content` files qualifies -
- * measured 2026-09-23, `git-content.ts` diverges in its `isMissingPath` comment as well as its header, and
- * `git-content.test.ts` diverges across most of its length - so both keep their whole-file exceptions. This
- * list is here for the same reason {@link TRANSFORM_ARMS} is: this file is the shape the downstream repos
- * adopt, and downstream is where the case is live.
+ * **Empty is the correct state for this repo today.** `git-content.ts` does not qualify - measured 2026-09-23,
+ * it diverges in its `isMissingPath` comment as well as its header - so it keeps its whole-file exception.
+ * `git-content.test.ts` needs no entry at all: the peer made its suite repo-neutral and this repo took it byte
+ * for byte on 2026-09-24. This list is here for the same reason {@link TRANSFORM_ARMS} is: this file is the
+ * shape the downstream repos adopt, and downstream is where the case is live.
  */
 const HEADER_ONLY_DIVERGENCES: Readonly<Record<string, string>> = {};
 

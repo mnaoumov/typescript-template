@@ -812,6 +812,23 @@ function getUnicornConfigs(): Linter.Config[] {
     },
     {
       /*
+       * Shared byte-for-byte with `obsidian-test-mocks`, whose config raises this rule's limit to 4 across the
+       * repo, so the peer lints its copy at a depth this repo's default of 3 reports: the binary-index case nests
+       * `readFileSync(join(...))` inside `equals(...)` inside `expect(...)`. Matching the peer's limit on this one
+       * file keeps it takeable whole; the rest of the repo keeps the default.
+       */
+      files: ['scripts/helpers/git-content.test.ts'],
+      rules: {
+        'unicorn/max-nested-calls': [
+          'error',
+          {
+            max: 4
+          }
+        ]
+      }
+    },
+    {
+      /*
        * These are VENDORED byte-identical copies of `obsidian-dev-utils`' rule sources, asserted by
        * `npm run check:vendored-eslint-rules` — so a report here can never be answered by editing the file, and
        * upstream carries no inline disable for either rule because it turns both off in its own config.
