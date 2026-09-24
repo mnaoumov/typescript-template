@@ -118,7 +118,7 @@ interface ParsedTag {
 }
 
 /**
- * Parameters for {@link parseTypeParamTags}.
+ * Parameters for {@link parseTypeParameterTags}.
  */
 interface ParseTypeParameterTagsParams {
   /**
