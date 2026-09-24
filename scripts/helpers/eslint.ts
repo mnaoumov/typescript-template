@@ -7,6 +7,10 @@
  * code the same way -- `Command failed with exit code N` -- which puts a rule that threw, a broken config
  * and an OS-level death in the same bucket as real findings. The reader then goes hunting for a defect in
  * source code that was never judged at all.
+ *
+ * The other half of the same problem is at the clean end: ESLint exits `0` when it reported WARNINGS and no
+ * errors, so a gate reading the exit code alone calls a tree with a standing warning clean. See
+ * {@link ESLINT_MAX_WARNINGS_ARGUMENTS}.
  */
 
 import type { ExecResult } from './exec.ts';
@@ -17,7 +21,8 @@ import { execFromRoot } from './root.ts';
 /**
  * What an ESLint run actually established.
  *
- * - `clean` -- it linted everything and found nothing.
+ * - `clean` -- it linted everything and found nothing, warnings included: see
+ *   {@link ESLINT_MAX_WARNINGS_ARGUMENTS} for what makes the "included" half true.
  * - `lint-problems` -- it linted everything and the SOURCE is red.
  * - `did-not-lint` -- it never got through the lint, so the source has not been judged at all.
  */
@@ -42,11 +47,30 @@ interface LintOptions {
  * the process. Only `1` is evidence about the source; the rest are evidence about the linter, and a caller
  * that reads them as findings goes hunting for a defect that is not there.
  *
+ * `0` is only as strong as {@link ESLINT_MAX_WARNINGS_ARGUMENTS} makes it: on its own ESLint exits `0` for a
+ * run that reported WARNINGS and no errors, which this would read as `clean`.
+ *
  * @see {@link https://eslint.org/docs/latest/use/command-line-interface#exit-codes}
  */
 const ESLINT_EXIT_CODE_CLEAN = 0;
 
 const ESLINT_EXIT_CODE_LINT_PROBLEMS = 1;
+
+/**
+ * The flag that makes a WARNING count as a finding.
+ *
+ * ESLint exits `0` when a run reported warnings and no errors, so without this the gate reads a warning as a
+ * clean tree: `lint` prints it, returns success, and CI, the pre-commit hook and every sweep agree the tree is
+ * clean. A warning that nothing ever fails on is a warning that stands for ever - which is not hypothetical,
+ * the fleet has been carrying several, each of which needed a person rather than a gate to notice it.
+ *
+ * It is passed unconditionally and there is no option to raise it. A ceiling a repo can raise is a gate
+ * somebody turns off, and the repo that wants one has a standing warning it should be fixing instead.
+ *
+ * It is passed on the `--fix` runs too: whatever is left after fixing is exactly what the no-fix run would
+ * have judged, so the two hops cannot disagree about what counts.
+ */
+const ESLINT_MAX_WARNINGS_ARGUMENTS: readonly string[] = ['--max-warnings', '0'];
 
 /**
  * The banner ESLint's fatal-error handler writes to stderr before exiting. It is NOT crash-specific: ESLint
@@ -132,7 +156,12 @@ export function describeFailureToLint(result: ExecResult): string {
  */
 export async function lint(options: LintOptions = {}): Promise<void> {
   const targets = options.paths?.length ? options.paths : ['.'];
-  const result = await execFromRoot([...resolveToolCommand({ tool: 'eslint' }), ...(options.shouldFix ? ['--fix'] : []), { batchedArguments: targets }], {
+  const result = await execFromRoot([
+    ...resolveToolCommand({ tool: 'eslint' }),
+    ...ESLINT_MAX_WARNINGS_ARGUMENTS,
+    ...(options.shouldFix ? ['--fix'] : []),
+    { batchedArguments: targets }
+  ], {
     shouldIgnoreExitCode: true,
     shouldIncludeDetails: true
   });
