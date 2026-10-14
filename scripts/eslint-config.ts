@@ -38,7 +38,8 @@ import { getRootFolder } from './helpers/root.ts';
 
 const rootConfigFiles = [
   'commitlint.config.ts',
-  'eslint.config.mts'
+  'eslint.config.mts',
+  'vitest.config.ts'
 ];
 const sourceFiles = ['src/**/*.ts'];
 const scriptFiles = ['scripts/**/*.ts'];
