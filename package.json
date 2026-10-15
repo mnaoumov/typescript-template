@@ -16,8 +16,6 @@
   "type": "module",
   "scripts": {
     "build:compile": "jiti scripts/build-compile.ts",
-    "check:helpers-sync": "jiti scripts/check-helpers-sync.ts",
-    "check:vendored-eslint-rules": "jiti scripts/check-vendored-eslint-rules.ts",
     "commit": "jiti scripts/commit.ts",
     "format": "jiti scripts/format.ts",
     "format:check": "jiti scripts/format-check.ts",
@@ -41,14 +39,13 @@
     "@commitlint/types": "^21.2.0",
     "@eslint-community/eslint-plugin-eslint-comments": "^4.7.2",
     "@eslint/js": "^10.0.1",
+    "@mnaoumov/typescript-dev-toolkit": "^1.0.0",
     "@stylistic/eslint-plugin": "^5.10.0",
     "@total-typescript/ts-reset": "^0.6.1",
     "@tsconfig/strictest": "^2.0.8",
     "@types/markdown-it": "^14.1.2",
     "@types/node": "^26.1.1",
-    "@typescript-eslint/rule-tester": "^8.63.0",
-    "@typescript-eslint/utils": "^8.63.0",
-    "@vitest/coverage-v8": "^4.1.10",
+    "@vitest/coverage-v8": "^5.0.5",
     "better-typescript-lib": "^2.12.0",
     "cspell": "^10.0.1",
     "czg": "^1.13.1",
@@ -65,13 +62,13 @@
     "jiti": "^2.7.0",
     "linkinator": "^7.6.1",
     "markdownlint": "^0.41.0",
-    "markdownlint-cli2": "^0.23.0",
-    "markdownlint-rule-relative-links": "^5.1.1",
+    "markdownlint-cli2": "0.23.2",
+    "markdownlint-rule-relative-links": "5.1.2",
     "nano-staged": "^1.0.2",
     "type-fest": "^5.8.0",
     "typescript": "6.0.3",
     "typescript-eslint": "^8.63.0",
-    "vitest": "^4.1.10"
+    "vitest": "^5.0.5"
   },
   "engines": {
     "node": ">=22.0.0"

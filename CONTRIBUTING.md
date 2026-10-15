@@ -58,32 +58,6 @@ npm run lint:md
 npm run lint:md:fix
 ```
 
-### Shared script helpers
-
-```bash
-npm run check:helpers-sync
-```
-
-The files under `scripts/helpers/` are peer copies, shared byte-for-byte with
-[`obsidian-test-mocks`](https://github.com/mnaoumov/obsidian-test-mocks) and `obsidian-typings-crawler`. This
-compares them against the first of those and fails on any difference that is not recorded — with the reason — in
-`scripts/check-helpers-sync.ts`. A change to one of these files is a change to all three, so sync it across
-rather than hand-editing a single copy. A recorded divergence also fails once the file becomes identical
-again, so the list cannot go stale. It fetches from GitHub, so `CHECK_HELPERS_SYNC=0` turns it off for a run
-when you are offline.
-
-### Vendored ESLint rules
-
-```bash
-npm run check:vendored-eslint-rules
-```
-
-The rule sources under `scripts/helpers/eslint-rules/` are hand-copies of
-[`obsidian-dev-utils`](https://github.com/mnaoumov/obsidian-dev-utils)', and this asserts they still match
-upstream after the deltas recorded in `scripts/check-vendored-eslint-rules.ts`. Do not hand-edit a copy: take
-the upstream change whole, or record a new delta as a transform arm. It fetches from GitHub, so
-`CHECK_VENDORED_ESLINT_RULES=0` turns it off for a run when you are offline.
-
 ### Test
 
 ```bash
@@ -94,6 +68,5 @@ npm run test:coverage
 ## Pull Requests
 
 - Base your PR on the `main` branch.
-- Ensure all checks pass (`build:compile`, `lint`, `format:check`, `spellcheck`, `lint:md`,
-  `check:helpers-sync`, `check:vendored-eslint-rules`, `test`).
+- Ensure all checks pass (`build:compile`, `lint`, `format:check`, `spellcheck`, `lint:md`, `test`).
 - Use [Conventional Commits](https://www.conventionalcommits.org/) for your commit messages.

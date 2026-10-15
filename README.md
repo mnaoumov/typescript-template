@@ -38,8 +38,6 @@ npm install
 | `npm run spellcheck`                  | Spell check (cspell)                              |
 | `npm run lint:md`                     | Markdown lint                                     |
 | `npm run lint:md:fix`                 | Markdown lint + auto-fix                          |
-| `npm run check:helpers-sync`          | Assert the shared script helpers match their peer |
-| `npm run check:vendored-eslint-rules` | Assert the vendored ESLint rules match upstream   |
 | `npm run commit`                      | Commitizen commit wizard                          |
 
 ## Project structure
@@ -47,15 +45,7 @@ npm install
 ```text
 ├── src/                           # Project source code (empty in template)
 ├── scripts/                       # npm script entry points (jiti TS)
-│   └── helpers/                   # Shared utilities
-│       ├── exec.ts                # Command execution with batching
-│       ├── root.ts                # Project root resolution, execFromRoot
-│       ├── type-guards.ts         # assertNever, assertNonNullable, ensureNonNullable
-│       ├── eslint.ts              # ESLint runner
-│       ├── format.ts              # dprint runner
-│       ├── markdownlint.ts        # markdownlint runner
-│       ├── git-content.ts         # Reads a tracked file out of the git index
-│       └── eslint-rules/          # Custom ESLint rules (vendored — see below)
+│   └── helpers/eslint.ts          # ESLint runner that tells a crashed linter from findings
 ├── eslint.config.mts              # → scripts/eslint-config.ts
 ├── commitlint.config.ts           # → scripts/commitlint-config.ts
 ├── .markdownlint-cli2.mjs         # → scripts/markdownlint-cli2-config.ts
@@ -68,15 +58,15 @@ npm install
 
 Root config files are thin re-exports — actual logic lives in `scripts/`.
 
-## Shared script helpers
+## Shared tooling
 
-Everything under `scripts/helpers/` (apart from `eslint-rules/`, which has its own gate below) is a **peer copy**, shared byte-for-byte with [`obsidian-test-mocks`](https://github.com/mnaoumov/obsidian-test-mocks) and `obsidian-typings-crawler` — most of it descended from [`obsidian-dev-utils`](https://github.com/mnaoumov/obsidian-dev-utils)' `src/script-utils/`. A change to one of these files is a change to all three.
+The script helpers (process execution, root resolution, the dprint and markdownlint runners, the declaration check, the per-script off switch) and the custom ESLint rules come from [`@mnaoumov/typescript-dev-toolkit`](https://www.npmjs.com/package/@mnaoumov/typescript-dev-toolkit), a dev dependency, rather than from copies in this repo. Every entry point under `scripts/` runs inside its `wrapCliTask`, so setting the script's name to an off value (`LINT=0`, `SPELLCHECK=0`, ...) skips it for a run.
 
-`npm run check:helpers-sync` enforces that: it lists the peer's tree, fetches each shared file, and asserts byte-identity. A file only one side carries is not drift — the comparison is over the intersection, and anything one-sided is reported as information. A deliberate difference is recorded with its reason, and the record **expires**: once the file becomes identical again, the stale claim fails, so the list cannot quietly become a place to park things. It runs from the pre-commit hook and in CI, reads this repo's side out of the git index so it cannot race `lint:fix`, and is turned off for a run with `CHECK_HELPERS_SYNC=0`.
+The one helper kept locally is `scripts/helpers/eslint.ts`: the toolkit's `lint()` cannot yet tell a crashed linter (a rule that threw, a broken config) apart from real lint findings, and this one can.
 
 ## Custom ESLint rules
 
-Bundled under the `obsidian-dev-utils` plugin namespace and covered by their own unit tests (`scripts/helpers/eslint-rules/*.test.ts`):
+Registered under the `obsidian-dev-utils` plugin namespace by the toolkit's `inHouseEslintPlugin`:
 
 - **`obsidian-dev-utils/no-used-underscore-variables`** — flags `_`-prefixed parameters/variables that are actually used in the function body.
 - **`obsidian-dev-utils/no-async-callback-to-unsafe-return`** — flags async functions passed as callbacks to parameters with `any`/`unknown` return type (unhandled promise rejections).
@@ -84,10 +74,6 @@ Bundled under the `obsidian-dev-utils` plugin namespace and covered by their own
 - **`obsidian-dev-utils/readonly-params-options-result-members`** — requires members of `*Params`/`*Options`/`*Result` interfaces to be declared `readonly`.
 - **`obsidian-dev-utils/params-options-name-match`** — requires a parameter-bag type to be named after its owner, with `Params` for a sole required bag and `Options` otherwise.
 - **`obsidian-dev-utils/require-method-template`** — requires a `@typeParam`/`@template` JSDoc tag for each of a generic *method*'s type parameters, which `eslint-plugin-jsdoc`'s `require-template` does not reach.
-
-These sources are **vendored copies** of [`obsidian-dev-utils`](https://github.com/mnaoumov/obsidian-dev-utils)' `src/script-utils/linters/eslint-rules/`, not local code: this repo depends on nothing from that package, so the rules are hand-copied rather than imported. Take an upstream change whole rather than hand-editing one.
-
-`npm run check:vendored-eslint-rules` enforces that. It lists upstream's directory, fetches each source, applies the handful of recorded deltas as *transform arms*, and asserts byte-identity — so accepting a new divergence is a code change that every later run then enforces, rather than a comment nothing reads. It runs from the pre-commit hook and in CI, reads this repo's side out of the git index so it cannot race `lint:fix`, and is turned off for a run with `CHECK_VENDORED_ESLINT_RULES=0`.
 
 ## TypeScript strictness
 
