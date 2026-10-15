@@ -13,10 +13,10 @@
  * {@link ESLINT_MAX_WARNINGS_ARGUMENTS}.
  */
 
-import type { ExecResult } from './exec.ts';
+import type { ExecResult } from '@mnaoumov/typescript-dev-toolkit/exec';
 
-import { resolveToolCommand } from './package-manager.ts';
-import { execFromRoot } from './root.ts';
+import { resolveToolCommand } from '@mnaoumov/typescript-dev-toolkit/package-manager';
+import { execFromRoot } from '@mnaoumov/typescript-dev-toolkit/root';
 
 /**
  * What an ESLint run actually established.

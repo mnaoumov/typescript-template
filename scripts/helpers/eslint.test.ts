@@ -19,6 +19,12 @@
  * this is a claim about the invocation and not about ESLint.
  */
 
+import type {
+  CommandPart,
+  ExecResult
+} from '@mnaoumov/typescript-dev-toolkit/exec';
+
+import { execFromRoot } from '@mnaoumov/typescript-dev-toolkit/root';
 import {
   beforeEach,
   describe,
@@ -27,24 +33,18 @@ import {
   vi
 } from 'vitest';
 
-import type {
-  CommandPart,
-  ExecResult
-} from './exec.ts';
-
 import {
   classifyEslintExit,
   describeFailureToLint,
   lint,
   LINT_PROBLEMS_MESSAGE
 } from './eslint.ts';
-import { execFromRoot } from './root.ts';
 
-vi.mock('./package-manager.ts', () => ({
+vi.mock('@mnaoumov/typescript-dev-toolkit/package-manager', () => ({
   resolveToolCommand: (): string[] => ['eslint']
 }));
 
-vi.mock('./root.ts', () => ({
+vi.mock('@mnaoumov/typescript-dev-toolkit/root', () => ({
   execFromRoot: vi.fn()
 }));
 
