@@ -45,7 +45,6 @@ npm install
 ```text
 ├── src/                           # Project source code (empty in template)
 ├── scripts/                       # npm script entry points (jiti TS)
-│   └── helpers/eslint.ts          # ESLint runner that tells a crashed linter from findings
 ├── eslint.config.mts              # → scripts/eslint-config.ts
 ├── commitlint.config.ts           # → scripts/commitlint-config.ts
 ├── .markdownlint-cli2.mjs         # → scripts/markdownlint-cli2-config.ts
@@ -60,9 +59,7 @@ Root config files are thin re-exports — actual logic lives in `scripts/`.
 
 ## Shared tooling
 
-The script helpers (process execution, root resolution, the dprint and markdownlint runners, the declaration check, the per-script off switch) and the custom ESLint rules come from [`@mnaoumov/typescript-dev-toolkit`](https://www.npmjs.com/package/@mnaoumov/typescript-dev-toolkit), a dev dependency, rather than from copies in this repo. Every entry point under `scripts/` runs inside its `wrapCliTask`, so setting the script's name to an off value (`LINT=0`, `SPELLCHECK=0`, ...) skips it for a run.
-
-The one helper kept locally is `scripts/helpers/eslint.ts`: the toolkit's `lint()` cannot yet tell a crashed linter (a rule that threw, a broken config) apart from real lint findings, and this one can.
+The script helpers (process execution, root resolution, the ESLint, dprint and markdownlint runners, the declaration check, the per-script off switch) and the custom ESLint rules come from [`@mnaoumov/typescript-dev-toolkit`](https://www.npmjs.com/package/@mnaoumov/typescript-dev-toolkit), a dev dependency, rather than from copies in this repo. Every entry point under `scripts/` runs inside its `wrapCliTask`, so setting the script's name to an off value (`LINT=0`, `SPELLCHECK=0`, ...) skips it for a run.
 
 ## Custom ESLint rules
 
