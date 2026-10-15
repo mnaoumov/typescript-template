@@ -689,13 +689,6 @@ function getUnicornConfigs(): Linter.Config[] {
             }
           }
         ],
-        /*
-         * `null` is what Node hands back for a child process's `exitCode` and `exitSignal`, and the toolkit's
-         * `ExecResult` keeps that typing, so `scripts/helpers/eslint.test.ts` has to spell `null` to build one
-         * (the two sites that fire). The rule cannot tell a foreign `null` from an accidental one, and following
-         * it would mean retyping a surface this repo does not own.
-         */
-        'unicorn/no-null': 'off',
         // Spell encodings the way the Encoding Standard does (`utf-8`), which is also what `TextDecoder` reports and what the sibling repos use.
         'unicorn/text-encoding-identifier-case': [
           'error',
