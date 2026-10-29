@@ -68,7 +68,8 @@ Registered under the `typescript-dev-toolkit` plugin namespace by the toolkit's 
 - **`typescript-dev-toolkit/no-used-underscore-variables`** — flags `_`-prefixed parameters/variables that are actually used in the function body.
 - **`typescript-dev-toolkit/no-async-callback-to-unsafe-return`** — flags async functions passed as callbacks to parameters with `any`/`unknown` return type (unhandled promise rejections).
 - **`typescript-dev-toolkit/no-unused-params-members`** — flags members of a `*Params`/`*Options` interface that are never accessed by the function receiving it.
-- **`typescript-dev-toolkit/readonly-params-options-result-members`** — requires members of `*Params`/`*Options`/`*Result` interfaces to be declared `readonly`.
+- **`typescript-dev-toolkit/readonly-interface-members`** — requires every interface property to be declared `readonly`.
+- **`typescript-dev-toolkit/no-keyword-identifiers`** — requires a `$` prefix on bare keyword binding names such as `object` or `event` (`$object`, `$event`).
 - **`typescript-dev-toolkit/params-options-name-match`** — requires a parameter-bag type to be named after its owner, with `Params` for a sole required bag and `Options` otherwise.
 - **`typescript-dev-toolkit/require-method-template`** — requires a `@typeParam`/`@template` JSDoc tag for each of a generic *method*'s type parameters, which `eslint-plugin-jsdoc`'s `require-template` does not reach.
 
