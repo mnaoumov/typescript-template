@@ -1,7 +1,10 @@
 import { wrapCliTask } from '@mnaoumov/typescript-dev-toolkit/cli-utils';
-import { resolveToolCommand } from '@mnaoumov/typescript-dev-toolkit/package-manager';
-import { execFromRoot } from '@mnaoumov/typescript-dev-toolkit/root';
+import { testCoverage } from '@mnaoumov/typescript-dev-toolkit/test-runners/vitest';
 
-await wrapCliTask(async () => {
-  await execFromRoot([...resolveToolCommand({ tool: 'vitest' }), 'run', '--coverage']);
-});
+const FULL_COVERAGE_IN_PERCENTS = 100;
+
+await wrapCliTask(() =>
+  testCoverage({
+    minCoverageInPercents: FULL_COVERAGE_IN_PERCENTS
+  })
+);
